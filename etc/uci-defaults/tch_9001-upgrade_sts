@@ -1,0 +1,7 @@
+#!/bin/sh
+nimda_user=$(uci get web.usr_nimda.name)
+if [ $nimda_user ]; then
+  uci delete web.usr_nimda
+  uci del_list web.default.users='usr_nimda'
+fi
+uci commit web

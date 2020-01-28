@@ -1,0 +1,9 @@
+Package: kmod-nls-utf8
+Version: 4.1.38-1
+Depends: kernel (=4.1.38-1-5ff22673453f0c708ab7d1b4a31e74dd), kmod-nls-base
+Source: package/kernel/linux
+License: GPLv2
+Section: kernel
+Architecture: arm_cortex-a9
+Installed-Size: 1319
+Description:  Kernel module for NLS UTF-8
