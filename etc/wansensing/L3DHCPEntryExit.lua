@@ -18,7 +18,7 @@ local function non_novas_entry(runtime, l2type)
 
     logger:notice("The L3DHCP entry script is configuring DHCP on wan interface on l2type interface " .. tostring(l2type))
 
-    -- initialize failures counters
+    -- initialize failure counters
     runtime.l3dhcp_failures = 0
     runtime.l3rx_bytes =  0
     runtime.l3rxbyte_failures =  0
@@ -55,11 +55,6 @@ local function non_novas_entry(runtime, l2type)
         -- disconnect pppv
         x:delete("network", "pppv", "ifname")
         x:set("network", "pppv", "auto", "0")
-        -- connect video and video2
-        x:set("network", "video", "ifname", "atm_video")
-        x:delete("network", "video", "auto")
-        x:set("network", "video2", "ifname", "atm_video2")
-        x:delete("network", "video2", "auto")
         x:commit("network")
         --the WAN interface is defined --> create the xtm queues
         os.execute("/etc/init.d/xtm restart")
@@ -67,8 +62,6 @@ local function non_novas_entry(runtime, l2type)
         conn:call("network", "reload", { })
         conn:call("network.interface.wan", "up", { })
         conn:call("network.interface.ppp", "up", { })
-        conn:call("network.interface.video", "up", { })
-        conn:call("network.interface.video2", "up", { })
     elseif l2type == "VDSL" then
         -- connect ppp
         x:set("network", "ppp", "ifname", "ptm0")
@@ -77,12 +70,6 @@ local function non_novas_entry(runtime, l2type)
         x:set("network", "pppv", "ifname", "vlan_ppp")
         x:delete("network", "pppv", "auto")
         x:set("network", "vlan_ppp", "ifname", "ptm0")
-        -- connect video and disconnect video2
-        x:set("network", "video", "ifname","vlan_video")
-        x:delete("network", "video", "auto")
-        x:set("network", "vlan_video", "ifname", "ptm0")
-        x:delete("network", "video2", "ifname")
-        x:set("network", "video2", "auto", "0")
         x:commit("network")
         --the WAN interface is defined --> create the xtm queues
         os.execute("/etc/init.d/xtm restart")
@@ -91,7 +78,6 @@ local function non_novas_entry(runtime, l2type)
         conn:call("network.interface.wan", "up", { })
         conn:call("network.interface.ppp", "up", { })
         conn:call("network.interface.pppv", "up", { })
-        conn:call("network.interface.video", "up", { })
     elseif l2type == "ETH" then
         -- connect ppp
         x:set("network", "ppp", "ifname", "eth4")
@@ -100,11 +86,6 @@ local function non_novas_entry(runtime, l2type)
         x:set("network", "pppv", "ifname", "vlan_hfc")
         x:delete("network", "pppv", "auto")
         x:set("network", "vlan_hfc", "ifname", "eth4")
-        -- disconnect video and video2
-        x:delete("network", "video", "ifname")
-        x:set("network", "video", "auto", "0")
-        x:delete("network", "video2", "ifname")
-        x:set("network", "video2", "auto", "0")
         x:commit("network")
         os.execute("sleep 2")
         conn:call("network", "reload", { })

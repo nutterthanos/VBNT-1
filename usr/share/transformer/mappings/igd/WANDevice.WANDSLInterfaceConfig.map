@@ -185,6 +185,7 @@ local InternetGatewayDevice_WANDevice_i_WANDSLInterfaceConfig_ = {
           "17a",
           "17b",
           "30a",
+          "35b",
           "",
         },
       },
@@ -577,10 +578,8 @@ local InternetGatewayDevice_WANDevice_i_WANDSLInterfaceConfig_ = {
 }
 
 local setmetatable = setmetatable
-local tostring = tostring
+local tostring, tonumber, match, gmatch, upper = tostring, tonumber, string.match, string.gmatch, string.upper
 local split_key = mapper("nwcommon").split_key
-local tonumber = tonumber
-local match = string.match
 local luabcm = require('luabcm')
 
 local mapper = mapper
@@ -597,7 +596,7 @@ local get_from_uci = ucihelper.get_from_uci
 local set_on_uci = ucihelper.set_on_uci
 local commit = ucihelper.commit
 local revert = ucihelper.revert
-
+local xdslBinding = {config = "xdsl"}
 local transactions = {}
 
 local empty_mt = { __index = function() return "" end }
@@ -696,6 +695,21 @@ local statusmap = {
   [8]  = "EstablishingLink"
 }
 
+
+local function lineIdMap()
+  local map = {}
+  ucihelper.foreach_on_uci(xdslBinding, function(s)
+    local name = s['.name']
+    if s['.name'] then
+    -- Replace dsl with line in name
+      map["dsl:"..name] = string.gsub(name, "dsl", "line")
+    end
+  end)
+  return map
+end
+
+local xdslctlLineIdMap = lineIdMap()
+
 local function getStatus()
   local status = conn:call("xdsl", "status", {})
   if not status then
@@ -722,9 +736,27 @@ local function getDSLStats(key, option)
   if dsllinenumber then
     luastats = luabcm.getAdslMib(dsllinenumber)
   end
-  return luastats and tostring(luastats[option]) or "0"
+  if luastats and type(luastats) == "table" then
+    return tostring(luastats[option])
+  end
+  return "0"
 end
 
+local function getAllowedProfiles(profiles, key)
+  if profiles and profiles ~= "" then
+    local _, device = getDevtypeAndName(key)
+    xdslBinding.sectionname = device
+    xdslBinding.option = "profile"
+    local dslprofiles = ucihelper.get_from_uci(xdslBinding)
+    for _, v in ipairs(dslprofiles) do
+      if match(v, "BrcmPriv1") then
+        profiles = profiles .. ",35b"
+        break
+      end
+    end
+  end
+  return profiles or ""
+end
 
 local function getShapingRate(key)
     local _, devname = getDevtypeAndName(key)
@@ -738,6 +770,34 @@ local function getShapingRate(key)
       value = tostring(tonumber(value) * 1000)
     end
     return value
+end
+
+local function getAttenuationValues(key)
+  local mode = xdslctl.infoValue("mode", nil, nil, key)
+  local upStream, downStream = "0", "0"
+  if mode then
+    if match(upper(mode), "VDSL") then
+      local upStreamValue = xdslctl.infoPbParamsValue("attn", "us", "0", xdslctlLineIdMap[key])
+      local downStreamValue = xdslctl.infoPbParamsValue("attn", "ds", "0", xdslctlLineIdMap[key])
+      for value in gmatch(upStreamValue, "[^,%s]+") do
+        if value ~= "N/A" then
+          upStream = times10(value)
+          break
+        end
+      end
+      for value in gmatch(downStreamValue, "[^,%s]+") do
+        if value ~= "N/A" then
+          downStream = times10(value)
+          break
+        end
+      end
+      return upStream, downStream
+    else
+      upStream = times10(xdslctl.infoValue("attn", "us", "0", xdslctlLineIdMap[key]))
+      downStream = times10(xdslctl.infoValue("attn", "ds", "0", xdslctlLineIdMap[key]))
+    end
+  end
+  return upStream, downStream
 end
 
 InternetGatewayDevice_WANDevice_i_WANDSLInterfaceConfig_.entries = function(mapping, parentKey)
@@ -782,7 +842,8 @@ InternetGatewayDevice_WANDevice_i_WANDSLInterfaceConfig_.get = {
     return standards:gsub("T1_413", "T1.413")
   end,
   AllowedProfiles = function(mapping, param, key)
-    return xdslctl.infoValue("AllowedProfiles")
+    local profiles = xdslctl.infoValue("AllowedProfiles")
+    return getAllowedProfiles(profiles, key)
   end,
   CurrentProfile = function(mapping, param, key)
     local profile = xdslctl.infoValue("vdsl2profile")
@@ -869,10 +930,12 @@ InternetGatewayDevice_WANDevice_i_WANDSLInterfaceConfig_.get = {
     return profile ~= "N.A." and profile or " "
   end,
   UpstreamAttenuation = function(mapping, param, key)
-    return times10(xdslctl.infoValue("attn", "us", "0"))
+    local upStream = getAttenuationValues(key)
+    return upStream
   end,
   DownstreamAttenuation = function(mapping, param, key)
-    return times10(xdslctl.infoValue("attn", "ds", "0"))
+    local _, downStream =  getAttenuationValues(key)
+    return downStream
   end,
   UpstreamCurrRate = function(mapping, param, key)
     return xdslctl.infoValue("currentrate", "us", "0")
@@ -1022,7 +1085,19 @@ InternetGatewayDevice_WANDevice_i_WANDSLInterfaceConfig_.getall = function(mappi
   allvalues.X_0876FF_StandardSelected = mode or ""
   allvalues.PowerManagementState = xdslinfovalues["linkpowerstate"] or ""
   allvalues.StandardUsed = standards:gsub("T1_413", "T1.413") or ""
+  allvalues.LinkEncapsulationSupported = xdslinfovalues["LinkEncapsulationSupported"] or ""
+  allvalues.LinkEncapsulationRequested = xdslinfovalues["LinkEncapsulationRequested"] or ""
+  allvalues.LinkEncapsulationUsed = xdslinfovalues["LinkEncapsulationUsed"] or ""
   allvalues.StandardsSupported = standard:gsub("T1_413", "T1.413") or ""
+  allvalues.AllowedProfiles = getAllowedProfiles(xdslinfovalues["AllowedProfiles"], key) or ""
+  allvalues.CurrentProfile = xdslinfovalues["vdsl2profile"] ~= "N.A." and xdslinfovalues["vdsl2profile"] or ""
+  allvalues.UPBOKLE = xdslinfovalues["UPBOKLE"] or ""
+  allvalues.ActualInterleavingDelay = xdslinfovalues["ActualInterleavingDelay"] or ""
+  allvalues.ACTINP = xdslinfovalues["ACTINP"] or ""
+  allvalues.TRELLISds = xdslinfovalues["trellis"]["ds"] or ""
+  allvalues.TRELLISus = xdslinfovalues["trellis"]["us"] or ""
+  allvalues.SNRMpbus = xdslinfovalues["SNRMpb"]["us"] or ""
+  allvalues.SNRMpbds = xdslinfovalues["SNRMpb"]["ds"] or ""
   allvalues.LineEncoding = "DMT"
   allvalues.DataPath = "None"
   allvalues.InterleaveDepth="0"
@@ -1065,15 +1140,19 @@ InternetGatewayDevice_WANDevice_i_WANDSLInterfaceConfig_.getall = function(mappi
       end
     end
   end
+  local upStream, downStream = getAttenuationValues(key)
   allvalues.LineNumber = phonelinepairmapping[xdslctl.profileValue("phonelinepair")] or "0"
+  allvalues.X_0876FF_ProfileSelected = xdslinfovalues["vdsl2profile"] ~= "N.A." and xdslinfovalues["vdsl2profile"] or ""
+  allvalues.UpstreamAttenuation = upStream
+  allvalues.DownstreamAttenuation = downStream
   allvalues.UpstreamCurrRate = xdslinfovalues["currentrate"]["us"] or "0"
   allvalues.DownstreamCurrRate = xdslinfovalues["currentrate"]["ds"] or "0"
   allvalues.UpstreamMaxRate = xdslinfovalues["maxrate"]["us"] or "0"
   allvalues.DownstreamMaxRate = xdslinfovalues["maxrate"]["ds"] or "0"
   allvalues.UpstreamNoiseMargin = times10(xdslinfovalues["snr"]["us"] or "0")
   allvalues.DownstreamNoiseMargin = times10(xdslinfovalues["snr"]["ds"] or "0")
-  allvalues.UpstreamAttenuation = times10(xdslinfovalues["attn"]["us"] or "0")
-  allvalues.DownstreamAttenuation = times10(xdslinfovalues["attn"]["ds"] or "0")
+  allvalues.UpstreamAttenuation = upStream
+  allvalues.DownstreamAttenuation = downStream
   allvalues.UpstreamPower = times10(xdslinfovalues["pwr"]["us"] or "0")
   allvalues.DownstreamPower = times10(xdslinfovalues["pwr"]["ds"] or "0")
   allvalues.ATURVendor = "TMMB"

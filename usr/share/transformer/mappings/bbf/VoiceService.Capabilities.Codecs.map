@@ -153,7 +153,7 @@ Multi_Services_VoiceService_i_Capabilities_Codecs_i_.entries = function(mapping,
             if ((not s._key) or (tonumber(s._key) == nil)) then
                 binding.sectionname = s[".name"]
                 binding.option = "_key"
-                ucihelper.generate_key_on_uci(binding, tonumber(entry))
+                s._key = tostring(ucihelper.generate_key_on_uci(binding, tonumber(entry)))
                 ucihelper.commit_keys(binding)
             end
             if not codecs[name] then

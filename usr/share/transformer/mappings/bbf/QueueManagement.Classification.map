@@ -718,6 +718,7 @@ local classificationRules = {
   classify = true,
   reclassify = true,
   l2classify = true,
+  rule = true,
 }
 
 local paramMap = {

@@ -45,13 +45,13 @@ you may be subject to prosecution and damages.
 
 Product: vbnt-1_iinet
 Release: Cobalt (18.3)
-Version: 18.3.0157-3141013-20181122120842-6303d86730b74ac4713ff0fe9bae10b656f96671
+Version: 18.3.0442-3141011-20191114233359-5b4d109838fdc5ff733038f3529ef7948a224ee8
 
-Hash config:         6303d86730b74ac4713ff0fe9bae10b656f96671
-Hash openwrt:        4f06f054d68d5f32d61ca421901fe1ec77c5e11e
-Hash kernel:         d546a52e2bc07d309c0790ebe9ec80903a00e504
-Hash custo:          b4517eed245c23b96898aa7d9a7f3760f6068a50
-Hash lte:            ff91c9ab917fd6313ff2891788c33fef717d2425
-Hash technicolor:    440a2c1aea27d76e5a15e613fc93ea66a4f01d50
+Hash config:         5b4d109838fdc5ff733038f3529ef7948a224ee8
+Hash openwrt:        aae8fb34f6f9a2676863d69a39a4d4d08e27d4af
+Hash kernel:         549dfee808b88f190cdb16bb55e263eb9c9a8ceb
+Hash lte:            8d40af45ffb7bd0a81c856f0b916c2536a8a267e
+Hash custo:          251a8296481f4909ae03ab52334e8842b46fa32c
+Hash technicolor:    865736bc261a4f90c02cb19659f7043044c6676d
 Hash routing:        210fc51dab0344d982f6be3c8cf289be0c27a689
-Hash packages:       5a27b5cc8632aa85f5cda4f4807699581b330bf8
+Hash packages:       47142ee8543d3d9ed247e13487aa125730abaefa

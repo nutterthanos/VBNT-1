@@ -69,7 +69,7 @@ Multi_.entries = function(mapping)
             for _,mode in ipairs(ip_modes) do
                 if device["mac-address"] and device[mode] and type(device[mode]) == "table" then
                     for _,v in pairs(device[mode]) do
-                        if v.dhcp and v.state and v.state == "connected"
+                        if v.dhcp and v.state and (v.state == "connected" or v.state == "stale")
                             and v.dhcp.tags and v.dhcp.tags:match("cpewan%-id") then
                             key = device["mac-address"]
 			    intf = device["interface"]

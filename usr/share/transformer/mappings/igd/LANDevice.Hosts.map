@@ -246,6 +246,7 @@ end
 local wlanPort = network.wlanRemotePort()
 
 local integratedQtnMAC = string.lower(ucihelper.get_from_uci({config = "env", sectionname = "var", option = "qtn_eth_mac"}))
+local lxcMAC = string.lower(ucihelper.get_from_uci({config = "env", sectionname = "var", option = "local_eth_mac_lxc"}))
 
 InternetGatewayDevice_LANDevice_i_Hosts_Host_i_.entries = function(mapping, LANintf)
   local hosts = {}
@@ -267,7 +268,7 @@ InternetGatewayDevice_LANDevice_i_Hosts_Host_i_.entries = function(mapping, LANi
       -- with the previous versions, otherwise all index numbers will suddenly
       -- change.
 
-      if dev['mac-address'] ~= integratedQtnMAC then
+      if dev['mac-address'] ~= integratedQtnMAC and dev['mac-address'] ~= lxcMAC then
         local key = format('%s|%s|', LANintf, dev['mac-address'])
         hosts[#hosts+1] = key
       end
@@ -400,7 +401,7 @@ local host_getter = {
     local addresses={}
     local ips = get_ip_list(dev,"ipv4")
     for _, ip in ipairs(ips) do
-      if ip.state=="connected" then
+      if ip.state=="connected" or ip.state=="stale" then
         addresses[#addresses+1]=ip.address
       end
     end
@@ -415,7 +416,7 @@ local host_getter = {
     local sources = {}
     local ips = get_ip_list(dev,"ipv4")
     for _, ip in ipairs(ips) do
-      if ip.state=="connected" then
+      if ip.state=="connected" or ip.state=="stale" then
         sources[#sources+1] = get_address_source(ip)
       end
     end
@@ -463,8 +464,8 @@ local host_getter = {
   end,
   InterfaceType = function(key, dev)
     dev = dev or key2dev(key)
-    local interfaceType = dev.l2interface and wlanPort and dev.l2interface == wlanPort and "wireless" or dev.technology
-    return TechnologyMap[ interfaceType or ""] or 'Other'
+    local interfaceType = dev.l2interface and dev.l2interface:match("(eth[%d+])") == wlanPort and "wireless" or dev.technology
+    return TechnologyMap[interfaceType] or 'Other'
   end,
   Active = function(key, dev)
     dev = dev or key2dev(key)
@@ -482,7 +483,7 @@ local host_getter = {
     local addresses={}
     local ips = get_ip_list(dev, "ipv6")
     for _, ip in ipairs(ips) do
-      if ip.state=="connected" then
+      if ip.state=="connected" or ip.state=="stale" then
         addresses[#addresses+1]=ip.address
       end
     end
@@ -492,7 +493,7 @@ local host_getter = {
     local deviceName = nil
     dev = dev or key2dev(key)
     if dev.l2interface then
-      if dev.l2interface:match("^eth") then
+      if dev.l2interface:match("eth[%d+]") then
         deviceName = resolve('InternetGatewayDevice.LANDevice.{i}.LANEthernetInterfaceConfig.{i}.', dev.l2interface)
       elseif dev.l2interface:match("^wl") then
         deviceName = resolve('InternetGatewayDevice.LANDevice.{i}.WLANConfiguration.{i}.', dev.l2interface)
@@ -507,8 +508,14 @@ local host_getter = {
     return getID(key, "userclass", "userclass", lease) or ""
   end,
   X_000E50_WiFiBand = function(key, dev)
+    local wifiBand
     dev = dev or key2dev(key)
-    return dev.wireless and radioMap[dev.wireless.radio] or ""
+    if dev.wireless then
+      wifiBand = radioMap[dev.wireless.radio]
+    elseif dev.l2interface then
+      wifiBand = dev.l2interface:match("(eth[%d+])") == wlanPort and dev.technology == "ethernet" and radioMap["radio_5G"]
+    end
+    return wifiBand or ""
   end,
 }
 

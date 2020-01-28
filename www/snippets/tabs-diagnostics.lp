@@ -6,6 +6,7 @@ gettext.textdomain('webui-core')
 local content_helper = require("web.content_helper")
 local ipairs, string, table = ipairs, string, table
 local lfs = require("lfs")
+local proxy = require("datamodel")
 local checkgpon = require("checkgponboard_helper")
 local is_gpon = checkgpon.isGPONBoard()
 local items = {
@@ -26,16 +27,22 @@ if is_gpon then
   }
 end
 
-local xdsl_exist = false
+local xdsl_exist = true
 
 if lfs.attributes("/etc/config/xdsl", "mode") == "file" then
   local eth4_data = {
     eth4_status = "sys.eth.port.@eth4.status",
-    eth4_operstate = "sys.class.net.@eth4.operstate"
+    eth4_operstate = "sys.class.net.@eth4.operstate",
+    intf_name = "uci.network.interface.@wan.ifname"
   }
   content_helper.getExactContent(eth4_data)
-  if eth4_data["eth4_status"] ~= "up" and eth4_data["eth4_operstate"] ~= "up" then
-    xdsl_exist = true
+  local eth4Intf = string.match(eth4_data["intf_name"], "eth4") or ""
+  if eth4Intf == "" then
+    local dev_name = "uci.network.device.@"..eth4_data["intf_name"]..".ifname"
+    eth4Intf = proxy.get(dev_name) and proxy.get(dev_name)[1] and proxy.get(dev_name)[1].value or ""
+  end
+  if eth4_data["eth4_status"] == "up" and eth4_data["eth4_operstate"] == "up" and eth4Intf == "eth4" then
+    xdsl_exist = false
   end
 end
 

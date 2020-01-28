@@ -106,6 +106,11 @@ local devices_filter = function(data)
     data["InterfaceType"] = "wireless - 5GHz"
   elseif match(data["L2Interface"], "eth*") then
     data["InterfaceType"] = "Ethernet"
+    if data["Port"] ~= "" then
+        data["InterfaceType"] = "Ethernet"
+    else
+        return false
+    end
   elseif match(data["L2Interface"], "moca*") then
     data["InterfaceType"] = "MoCA"
   end
@@ -153,4 +158,13 @@ end
   </form>\
 </div>\
 ');  ngx.print( ui_helper.createFooter() ); ngx.print('\
+<script>\
+$("#devices tbody tr").each(function() {\
+  var obj = $(this);\
+  var IPv4 = obj.children("td:nth-child(3)").text();\
+  if (IPv4 == "") {\
+    obj.children("td:nth-child(12)").html(\'<div id="" class="btn btn-mini btn-danger btn-table-delete tooltip-on" data-placement="top" data-original-title="Delete"><i class="icon-remove-sign icon-large"></i>  </div>\');\
+  }\
+});\
+</script>\
 '); 

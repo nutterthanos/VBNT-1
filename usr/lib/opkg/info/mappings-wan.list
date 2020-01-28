@@ -1,10 +1,10 @@
 /usr/share/transformer/mappings/rpc/igmpproxy.interface.map
-/usr/share/transformer/mappings/igd/X_000E50_ALG.map
 /usr/share/transformer/mappings/rpc/network.firewall.portforwardgroup.map
 /usr/share/transformer/mappings/igd/WANDevice.WANCommonInterfaceConfig.map
 /usr/lib/lua/transformer/shared/secrouting_helper.lua
 /usr/share/transformer/commitapply/rpc_network.ca
 /usr/share/transformer/mappings/rpc/igmpsnooping.map
+/usr/share/transformer/mappings/bbf/X_000E50_ALG.map
 /usr/share/transformer/commitapply/uci_firewall.ca
 /usr/share/transformer/mappings/igd/WANDevice.WANConnectionDevice.map
 /usr/share/transformer/mappings/bbf/Layer2Bridging.map
@@ -42,8 +42,8 @@
 /usr/lib/lua/transformer/shared/mobileconnection.lua
 /usr/share/transformer/mappings/igd/WANDevice.WANConnectionDevice.WANIPConnection.DHCPClient.map
 /usr/share/transformer/mappings/uci/ddns.map
-/usr/share/transformer/mappings/bbf/DynamicDNS.Client.Hostname.map
 /usr/lib/lua/transformer/shared/models/igd/wandevice.lua
+/usr/share/transformer/mappings/bbf/DynamicDNS.Client.Hostname.map
 /usr/share/transformer/commitapply/uci_ddns.ca
 /usr/share/transformer/mappings/rpc/dhcpv6.client.map
 /usr/share/transformer/mappings/igd/WANDevice.WANEthernetInterfaceConfig.map

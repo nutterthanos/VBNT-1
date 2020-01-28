@@ -1,3 +1,4 @@
+/usr/share/transformer/scripts/delete_dmz.sh
 /usr/share/transformer/mappings/rpc/system.log.map
 /usr/share/transformer/mappings/rpc/rpc.wanethernetinterfaceconfig.map
 /usr/share/transformer/commitapply/uci_webservice.ca
@@ -17,11 +18,12 @@
 /usr/share/transformer/mappings/uci/webservice.map
 /usr/share/transformer/mappings/bbf/DeviceInfo.MemoryStatus.map
 /usr/share/transformer/mappings/bbf/X_000E50_lastaccess.map
+/usr/share/transformer/mappings/bbf/DeviceInfo.X_0876FF_LED.map
 /usr/share/transformer/mappings/rpc/sys.class.map
 /usr/share/transformer/mappings/uci/env.map
 /usr/share/transformer/scripts/reload_syslog.sh
-/usr/share/transformer/mappings/bbf/DeviceInfo.ProcessStatus.map
 /usr/lib/lua/import_export/importer.lua
+/usr/share/transformer/mappings/bbf/DeviceInfo.ProcessStatus.map
 /usr/share/transformer/scripts/uci_system.sh
 /usr/lib/lua/transformer/shared/VendorConfig.lua
 /usr/lib/lua/transformer/shared/ImportConfig.lua
@@ -52,12 +54,11 @@
 /usr/lib/lua/import_export/importversion.lua
 /usr/share/transformer/scripts/umount_usb.sh
 /usr/share/transformer/commitapply/uci_system_ntp.ca
-/usr/share/transformer/mappings/igd/DeviceInfo.X_0876FF_LED.map
 /usr/share/transformer/mappings/rpc/sys.log.map
 /usr/share/transformer/commitapply/rpc_usb.ca
 /usr/share/transformer/mappings/uci/versioncusto.map
-/usr/share/transformer/mappings/uci/button.map
 /usr/share/transformer/mappings/rpc/system.fwupgrade.map
+/usr/share/transformer/mappings/uci/button.map
 /usr/share/transformer/commitapply/iperf.ca
 /usr/share/transformer/commitapply/uci_web_assistance_interface.ca
 /usr/share/transformer/mappings/igd/IGD.map

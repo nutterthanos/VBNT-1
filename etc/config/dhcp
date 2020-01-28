@@ -90,18 +90,6 @@ config dhcp 'pppv'
 	option interface	 'pppv'
 	option ignore		 '1'
 
-config dhcp 'video'
-	option interface	 'video'
-	option ignore		 '1'
-
-config dhcp 'video2'
-	option interface	 'video2'
-	option ignore		 '1'
-
-config dhcp 'video6'
-	option interface	 'video6'
-	option ignore		 '1'
-
 config dhcp 'ipoe'
 	option interface	 'ipoe'
 	option ignore		 '1'

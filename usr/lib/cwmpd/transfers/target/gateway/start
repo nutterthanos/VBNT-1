@@ -26,16 +26,23 @@ else
 	reboot_on_failure=true
 fi
 
-upgrade_failed=true
-if "$delayed_switchover"; then
-	if /sbin/sysupgrade --safe -o -s "$image_url" >&2; then
-		touch "$wait_for_switchover_file"
-		upgrade_failed=false
-	fi
+if "$delayed_switchover" ; then
+  SWITCH=-s
 else
-	/usr/bin/lua "$script_dir/checkOngoingServices.lua" >&2
-	if /sbin/sysupgrade --safe "$image_url" >&2; then
-		upgrade_failed=false
+  SWITCH=
+fi
+
+upgrade_failed=true
+if sysupgrade --safe -o $SWITCH "$image_url" >&2; then
+  upgrade_failed=false
+fi
+if ! $upgrade_failed; then
+  if "$delayed_switchover"; then
+		touch "$wait_for_switchover_file"
+	else
+	  /usr/bin/lua "$script_dir/checkOngoingServices.lua" >&2
+	  reboot
+	  sleep 5000
 	fi
 fi
 

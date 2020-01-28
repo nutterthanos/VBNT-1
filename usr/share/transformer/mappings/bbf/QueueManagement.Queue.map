@@ -213,6 +213,7 @@ local commitApply = commitapply
 local dmordering = require 'transformer.shared.models.dmordering'
 
 local function setUciValue(sectionName, option, value)
+  qosBinding.sectiontype = option ~=  "policy" and "class"
   qosBinding.sectionname = sectionName
   qosBinding.option = option
   uciHelper.set_on_uci(qosBinding, value, commitApply)

@@ -24,7 +24,7 @@ device_event() {
     [ -n "$DNSMASQ_LEASE_EXPIRES" ] && json_add_int "lease-expires" $DNSMASQ_LEASE_EXPIRES
     [ -n "$DNSMASQ_DOMAIN" ] && json_add_string "domain" $DNSMASQ_DOMAIN
     [ -n "$DNSMASQ_CLIENT_ID" ] && json_add_string "client-id" $DNSMASQ_CLIENT_ID
-    [ -n "$DNSMASQ_VENDOR_CLASS" ] && json_add_string "vendor-class" $DNSMASQ_VENDOR_CLASS
+    [ -n "$DNSMASQ_VENDOR_CLASS" ] && json_add_string "vendor-class" "$DNSMASQ_VENDOR_CLASS"
     [ -n "$DNSMASQ_CPEWAN_OUI" ] && json_add_string "manufacturer-oui" "$DNSMASQ_CPEWAN_OUI"
     [ -n "$DNSMASQ_CPEWAN_SERIAL" ] && json_add_string "serial-number" "$DNSMASQ_CPEWAN_SERIAL"
     [ -n "$DNSMASQ_CPEWAN_CLASS" ] && json_add_string "product-class" "$DNSMASQ_CPEWAN_CLASS"

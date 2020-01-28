@@ -2,6 +2,8 @@ config assistance 'remote'
     option sessionmgr 'assistance'
     option user       'assist'
     option passwordchars '23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
+    option interface 'wan'
+    option interface6 'wan6'
 
 config sessionmgr "default"
     option cookiepath   "/"
@@ -53,6 +55,7 @@ config user 'usr_assist'
 
 config ruleset "ruleset_main"
     list rules        "gateway"
+    list rules        "changeaccesskey"
     list rules        "login"
     list rules        "password"
     list rules        "homepage"
@@ -78,9 +81,14 @@ config ruleset "ruleset_main"
     list rules        "usermgrmodal"
     list rules        "syslogmodal"
     list rules        "todmodal"
+    list rules        "wirelessajax"
 
 config rule 'gateway'
     option target     '/gateway.lp'
+    list roles        'admin'
+
+config rule 'changeaccesskey'
+    option target     '/change-access-key.lp'
     list roles        'admin'
 
 config rule "login"
@@ -183,3 +191,7 @@ config rule "syslogmodal"
 config rule "todmodal"
     option target       "/modals/tod-modal.lp"
     list roles          "admin"
+
+config rule 'wirelessajax'
+    option target '/ajax/wirelesscard.lua'
+    list roles 'admin'

@@ -1,5 +1,4 @@
 config main
-	list ignore_patterns 'Services%.VoiceService%.{i}%.VoiceProfile%.{i}%.Tone%.'
 	list ignore_patterns 'Services%.VoiceService%.{i}%.Capabilities%.ToneDescriptionsEditable$'
 	list ignore_patterns 'Services%.VoiceService%.{i}%.Capabilities%.PatternBasedToneGeneration$'
 	list ignore_patterns 'Services%.VoiceService%.{i}%.Capabilities%.FileBasedToneGeneration$'

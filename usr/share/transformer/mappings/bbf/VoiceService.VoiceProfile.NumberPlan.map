@@ -701,20 +701,15 @@ Multi_Services_VoiceService_i_VoiceProfile_i_NumberingPlan_PrefixInfo_i_.get = f
     local ntype, keyid = getInfoFromKey(key)
     local object = content_entries[keyid]
     local map = number_maps[ntype]
+    local result
     if map.value[param] then
         if type(map.value[param]) == "function" then
-            return map.value[param](object, keyid)
+            result = map.value[param](object, keyid)
         else
-            local result = object[map.value[param]]
-            if result then
-                return result
-            else
-                return map.default[param]
-            end
+            result = object[map.value[param]]
         end
-    else
-        return map.default[param]
     end
+    return result or map.default[param]
 end
 
 Multi_Services_VoiceService_i_VoiceProfile_i_NumberingPlan_PrefixInfo_i_.set = function(mapping, param, value, key)

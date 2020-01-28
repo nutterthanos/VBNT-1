@@ -84,6 +84,8 @@ create_tod_rule_mac()
     config_get start_time $host start_time
     config_get stop_time $host stop_time
 
+    id=${id//-/:}
+
     if [ -z "${enabled}" ] || [ "${enabled}" = "0" ]; then
         echo "Rule is disabled"
         return

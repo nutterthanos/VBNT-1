@@ -358,11 +358,8 @@ end
 -- If enabled,need to send the Gateway IP address as DNS Server.
 -- If VIPEnable is disabled,should adapt UCI configuration to ignore that section.
 local function getVIPEnable(mapping, param, key)
-    dhcpBinding.sectionname = "lan"
-    dhcpBinding.option = "start"
-    local dhcpStart = getFromUci(dhcpBinding)
-    dhcpBinding.option = "limit"
-    local dhcpLimit = getFromUci(dhcpBinding)
+    local dhcpStart = getDHCPConfig(key, "start")
+    local dhcpLimit = getDHCPConfig(key, "limit")
     return (dhcpStart == "" and dhcpLimit == "") and "1" or "0"
 end
 
@@ -370,21 +367,21 @@ end
 --If VIP is enabled, dhcp option start and limit options should be ignored or set to empty. So that it will take default values from gateway.
 --If VIP is disabled, dhcp options start and limit should be considered and set back to default values.
 local function setVIPEnable(mapping, param, value, key)
+    local section = getDHCPConfigSectionForIntf(key)
+    if not section then
+        return nil, "DHCP section not found"
+    end
     local data = getDHCPdata(key)
     if  value == "1" then
-      setUciValue(dhcpBinding, "tch_map_start_backup", data.start)
-      setUciValue(dhcpBinding, "tch_map_limit_backup", data.numips)
-      setUciValue(dhcpBinding, "start", "")
-      setUciValue(dhcpBinding, "limit", "")
+      setDHCPConfig(key, "tch_map_start_backup", data.start)
+      setDHCPConfig(key, "tch_map_limit_backup", data.numips)
+      setDHCPConfig(key, "start", "")
+      setDHCPConfig(key, "limit", "")
     elseif value == "0" then
-      local dhcpConfig = uci_helper.getall_from_uci(dhcpBinding)
-      if(dhcpConfig["tch_map_start_backup"] and dhcpConfig["tch_map_limit_backup"]) then
-        setUciValue(dhcpBinding, "start",dhcpConfig["tch_map_start_backup"])
-        setUciValue(dhcpBinding, "limit", dhcpConfig["tch_map_limit_backup"])
-        setUciValue(dhcpBinding, "tch_map_start_backup", "")
-        setUciValue(dhcpBinding, "tch_map_limit_backup", "")
-      end
-        return false
+      setDHCPConfig(key, "start", data.start)
+      setDHCPConfig(key, "limit", data.numips)
+      setDHCPConfig(key, "tch_map_start_backup", "")
+      setDHCPConfig(key, "tch_map_limit_backup", "")
     end
 end
 

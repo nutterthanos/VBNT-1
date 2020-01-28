@@ -1,15 +1,18 @@
 #!/bin/sh
 
-# create smaller key for engineering boards to lower boot time
+# install precreated key for engineering boards to lower boot time
 
 efu_allowed='/proc/efu/allowed'
-dropbear_dir='/tmp/dropbear'
-dropbear_rsa_key="${dropbear_dir}/dropbear_rsa_host_key"
+dropbear_dir='/etc/dropbear'
+dropbear_tmp='/tmp/dropbear'
+dropbear_rsa_key="${dropbear_tmp}/dropbear_rsa_host_key"
+dropbear_rsa_key_dev="${dropbear_dir}/dropbear_rsa_host_key-devel"
 
-[ ! -e "${dropbear_rsa_key}" -a -r "${efu_allowed}" ] && \
-  grep -q 'skip_signature_check' "${efu_allowed}" && \
-  grep -q 'allow_root_shell_access' "${efu_allowed}" && \
-  mkdir -p "${dropbear_dir}" && \
-  /usr/bin/dropbearkey -t rsa -s 768 -f "${dropbear_rsa_key}"
+[ -e "${dropbear_rsa_key_dev}" -a -r "${efu_allowed}" ] && \
+  grep -q 'allow_full_access_for_ci' "${efu_allowed}" && \
+  mkdir -p "${dropbear_tmp}" && \
+  cp "${dropbear_rsa_key_dev}" "${dropbear_rsa_key}"
+
+rm -f "${dropbear_rsa_key_dev}"
 
 exit 0

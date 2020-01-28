@@ -36,5 +36,5 @@ boot() {
     fi
     uci_set system @system[0] hw_reboot_count $hw_reboot_count
     uci_set system @system[0] sw_reboot_count $sw_reboot_count
-    uci_commit
+    uci_commit system
 }

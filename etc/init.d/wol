@@ -26,6 +26,7 @@ wol_proxy_firewall_setup() {
 	local name="${1}"
 	local zone="${2}"
 	local src_port="${3}"
+	local src_ip="${4}"
 
 	procd_open_data
 
@@ -39,6 +40,8 @@ wol_proxy_firewall_setup() {
 		json_add_string family ipv4
 		json_add_string proto udp
 		json_add_string src_dport "${src_port}"
+		json_add_string dest_ip "${src_ip}"
+		json_add_string reflection 0
 		json_add_string target DNAT
 		json_close_object
 	fi
@@ -50,6 +53,7 @@ wol_proxy_firewall_setup() {
 	json_add_string family ipv4
 	json_add_string proto udp
 	json_add_string dest_port "${src_port}"
+	json_add_string dest_ip "${src_ip}"
 	json_add_string target ACCEPT
 	json_close_object
 
@@ -103,7 +107,7 @@ wol_proxy() {
 	procd_append_param command -i ${dest_dev} -h ${dest_ip} -p ${dest_port}
 	procd_set_param stdout 1
 	procd_set_param stderr 1
-	wol_proxy_firewall_setup "${proxy}" "${zone}" "${src_port}"
+	wol_proxy_firewall_setup "${proxy}" "${zone}" "${src_port}" "${src_ipaddr}"
 	procd_close_instance
 }
 

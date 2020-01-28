@@ -4,10 +4,14 @@ START=70
 STOP=10
 
 SERVICE_SIG_RELOAD="URG"
+SERVICE_SIG_RENEW_CONNREQ_SOCKET="USR2"
 USE_PROCD=1
 CWMPD_PID_FILE=/var/run/cwmpd.pid
 CWMPEVENTS_PID_FILE=/var/run/cwmpevents.pid
 CWMPD_FW_FILE=/lib/functions/firewall-cwmpd.sh
+
+EXTRA_COMMANDS="renew_connreq_socket"
+EXTRA_HELP="renew_connreq_socket Renew the ConnectionRequest socket"
 
 boot() {
   logger -t cwmpd "Starting cwmpd on boot"
@@ -60,6 +64,10 @@ reload_service() {
   # otherwise init.d will restart cwmpd on failure of the reload function
   # and that can lead to an unwanted racecondition during boot time
   true
+}
+
+renew_connreq_socket() {
+  procd_send_signal cwmpd cwmpd $(kill -l "${SERVICE_SIG_RENEW_CONNREQ_SOCKET}")
 }
 
 stop_service() {

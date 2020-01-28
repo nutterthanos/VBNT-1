@@ -221,7 +221,12 @@ ngx.print(ui_helper.createMessages(message_helper.popMessages()))
     local html = {}
     ajax_attr_light.light.class = dhcp_light_map[dhcp_state]
     html[#html + 1] = ui_helper.createLight(T"Status", nil, dhcp_state_map[dhcp_state], ajax_attr_light)
-    html[#html+1] = ui_helper.createSwitch(T"Enabled", "uci_wan_auto", content["uci_wan_auto"])
+    local attr
+    local uci_wans_enable = proxy.get("uci.wansensing.global.enable")[1].value
+    if uci_wans_enable == "1" then
+        attr = { group = { class = "hide" } }
+    end
+    html[#html+1] = ui_helper.createSwitch(T"Enabled", "uci_wan_auto", content["uci_wan_auto"], attr)
 
     ajax_attr.span.id = "ipaddr"
     html[#html+1] = ui_helper.createLabel(T"IP address", cs["ipaddr"], ajax_attr)

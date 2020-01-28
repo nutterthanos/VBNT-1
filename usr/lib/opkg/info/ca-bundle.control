@@ -5,5 +5,5 @@ Source: package/system/ca-certificates
 Section: base
 Maintainer: Christian Schoenebeck <christian.schoenebeck@gmail.com>
 Architecture: all
-Installed-Size: 148844
+Installed-Size: 148845
 Description:  System CA certificates as a bundle

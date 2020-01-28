@@ -22,7 +22,7 @@ LED='*'
 STATE=1
 VERBOSE=0
 
-while getopts “hb:c:l:s:v” OPTION
+while getopts "hb:c:l:s:v" OPTION
 do
      case $OPTION in
          h)
@@ -35,15 +35,15 @@ do
          c)
              COLOR=$OPTARG
              ;;
-	 l)
-	     LED=$OPTARG
-	     ;;
+         l)
+             LED=$OPTARG
+             ;;
          s)
              STATE=$OPTARG
              ;;
-	 v)
-	     VERBOSE=1
-	     ;;
+         v)
+             VERBOSE=1
+             ;;
          ?)
              usage
              exit

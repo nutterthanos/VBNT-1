@@ -5,5 +5,5 @@ Source: feeds/technicolor/mmbrcm
 Section: mmpbx
 Maintainer: Technicolor <linuxgw@technicolor.com>
 Architecture: arm_cortex-a9
-Installed-Size: 80184
+Installed-Size: 79956
 Description:  MM PBX Broadcom common library

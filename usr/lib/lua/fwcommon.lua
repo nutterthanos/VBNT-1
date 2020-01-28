@@ -184,8 +184,10 @@ function Common:SetStop(mac, enabled)
       self.set(host_config)
     end
   end
-  host_config.options.enabled = enabled
-  self.set(host_config, "enabled")
+  if check_section(self, host_config) then
+    host_config.options.enabled = enabled
+    self.set(host_config, "enabled")
+  end
 end
 
 function Common:SetOnlineStatus(mac, activity, enabled)
@@ -499,9 +501,9 @@ end
 
 -- sorted by site
 local function ssort(a,b)
-  local sa = a:match("^%d+|%d*|(.*)$")
-  local sb = b:match("^%d+|%d*|(.*)$")
-  return sa < sb
+  local sa = a:match("^(%d+)")
+  local sb = b:match("^(%d+)")
+  return tonumber(sa) < tonumber(sb)
 end
 
 local function update_url_list(self, id, option, value)
@@ -626,6 +628,11 @@ function Common:GetURL(id, option)
   return value
 end
 
+-- sorted by id
+local function sort_id(a,b)
+  return tonumber(a.id) < tonumber(b.id)
+end
+
 function Common:GetAllURLs()
   local urls = {}
   local key, enabled, site
@@ -640,7 +647,7 @@ function Common:GetAllURLs()
     urls[index].enabled = enabled == "0" and "0" or "1"
     index = index + 1
   end
-
+  sort(urls, sort_id)
   return urls
 end
 
@@ -959,9 +966,9 @@ function Common:CheckEcoTimeSlot()
     local day = date("%a")
     local frequency = Frequency[info.frequency]
     local bslot, bstate = self:CheckTimeSlot(info.start, info.stop)
-    local bday = frequency:find(day) or frequency == "All"
+    local bday = frequency:find(day) or frequency == "All" or frequency == ""
 
-    if info.enabled and bslot and bday and (bstate or (day ~= "Fri" and day ~= "Sun") or self:CheckTimeSlot(info.start, "24:00")) then
+    if info.enabled and bslot and bday and (bstate or (frequency ~= "" and day ~= "Fri" and day ~= "Sun") or self:CheckTimeSlot(info.start, "24:00")) then
       flag = true
     end
   end

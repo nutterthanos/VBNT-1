@@ -623,13 +623,13 @@ end
 function ConnectionList:setInterfaceOption(key, option, value)
 	local entry = self.entries[key]
 	local updated
-	if entry.active then
+--	if entry.active then
 		-- can set on the actual interface
 		intf_option.sectionname = entry.interface
 		intf_option.option = option
 		uci.set_on_uci(intf_option, value, self.commitapply)
 		updated = true
-	end
+--	end
 	-- set on wansensing device, if defined
 	local sdev = entry.wanconfig and entry.wanconfig.sdev
 	if sdev then

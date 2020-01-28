@@ -333,6 +333,25 @@ local function is_wireless(interface, macaddress)
   return nil
 end
 
+-- Probe all connected and stalled IP addresses of a device
+--
+-- Parameters:
+-- - device: [table] the device entry
+local function probe_device_addresses(device)
+  local mac = device["mac-address"]
+  local l3interface = device["l3interface"]
+  for _, mode in ipairs(ip_modes) do
+    for _, ip in pairs(device[mode]) do
+      if ip.state == "connected" or ip.state == "stale" then
+	ubus_conn:call("network.neigh", "probe", {
+			    ["interface"]=l3interface,
+			    ["mac-address"]=mac,
+			    [mode.."-address"]=ip.address})
+      end
+    end
+  end
+end
+
 -- Populates the IPv4/IPv6 information for a certain device/IP address pair
 --
 -- Parameters:
@@ -340,14 +359,15 @@ end
 -- - mac: [string] the MAC address of the device
 -- - address: [string] the IPv4 or IPv6 address
 -- - mode: [string] either ipv4 or ipv6
--- - action: [string] either add or delete
+-- - action: [string] add, stale or delete
 -- - conflictingmac: [string] the MAC address of the device conflicting with this address
 -- - dhcp: [table] containing DHCP information, nil if static config
 -- Returs:
 -- - [boolean] true if device state has changed
 local function update_ip_state(l3interface, mac, address, mode, action, conflictingmac, dhcp)
   local changed = false
-  local iplist = (alldevices[mac])[mode];
+  local device = alldevices[mac]
+  local iplist = device[mode];
   if (iplist[address]==nil) then
     iplist[address]={ address=address, state="disconnected" }
     changed = true
@@ -386,7 +406,11 @@ local function update_ip_state(l3interface, mac, address, mode, action, conflict
 	ipentry.dhcp.state = "connected"
 	changed = true
 
-	if ipentry.state ~= "connected" then
+	-- This is a good indication that the device is online again, possibly connected with a different address
+	-- Probe all its connected & stalled addresses
+	probe_device_addresses(device)
+
+	if ipentry.state == "disconnected" then
 	  ubus_conn:call("network.neigh", "probe", {
 			      ["interface"]=l3interface,
 			      ["mac-address"]=mac,
@@ -416,13 +440,17 @@ local function update_ip_state(l3interface, mac, address, mode, action, conflict
 	changed = true
       end
     end
-  else
+  elseif action == "delete" then
     if dhcp then
       if ipentry.dhcp and ipentry.dhcp.state == "connected" then
 	ipentry.dhcp.state = "disconnected"
 	changed = true
 
-	if ipentry.state ~= "disconnected" then
+	if mode == "ipv4" then
+	  -- This is a good indication that the device went offline
+	  -- Probe all its connected & stalled addresses
+	  probe_device_addresses(device)
+	elseif ipentry.state ~= "disconnected" then
 	  ubus_conn:call("network.neigh", "probe", {
 			      ["interface"]=l3interface,
 			      ["mac-address"]=mac,
@@ -433,6 +461,9 @@ local function update_ip_state(l3interface, mac, address, mode, action, conflict
       ipentry.state = "disconnected"
       changed = true
     end
+  elseif action == "stale" and ipentry.state ~= action then
+    ipentry.state = "stale"
+    changed = true
   end
 
   if not dhcp and ipentry["conflicts-with"] ~= conflictingmac then
@@ -744,6 +775,9 @@ local function set_device_state(device, state)
     device.disconnected_time = now
     interface_stats.disconnected_devices = interface_stats.disconnected_devices + 1
 
+    -- Probe all connected & stalled IPs of the disconnecting device
+    probe_device_addresses(device)
+
     -- Start delete timer if necessary
     local remaining = math.floor(delete_timer:remaining() / 1000)
     if remaining < 0 or remaining > MIN_DELETE_TIMER_VALUE * 1000 then
@@ -767,7 +801,7 @@ local function handle_device_update(msg)
   if (type(msg)~="table" or
     type(msg['mac-address'])~="string" or
     (not match(msg['mac-address'], "%x%x:%x%x:%x%x:%x%x:%x%x:%x%x")) or
-    (msg['action']~='add' and msg['action']~='delete') or
+    (msg['action']~='add' and msg['action']~='delete' and msg['action']~='stale') or
     type(msg['interface'])~="string" or
     (not (((type(msg['ipv4-address'])=="table") and type(msg['ipv4-address'].address)=="string" and match(msg['ipv4-address'].address, "%d+\.%d+\.%d+\.%d+"))
      or ((type(msg['ipv6-address'])=="table") and type(msg['ipv6-address'].address)=="string" and match(msg['ipv6-address'].address, "[%x:]+")) ))
@@ -879,7 +913,7 @@ local function handle_device_update(msg)
     -- Device is connected if at least 1 IP address is connected
     for _, mode in ipairs(ip_modes) do
       for _, j in pairs(device[mode]) do
-	if (j.state=='connected') then
+	if j.state == "connected" or j.state == "stale" then
 	  state = "connected"
 	  break
 	end
@@ -1515,6 +1549,27 @@ local function handle_device_link(msg)
   end
 end
 
+--to align connected/disconnected time of the LAN host when the NTP server is synced
+--to make sure only the first timechanged event is used to align the connected time.
+local time_changed
+local function handle_connected_time_update(msg)
+  local uci_cursor = require('uci').cursor(nil, "/var/state")
+  uci_cursor:load("system")
+  local synced = uci_cursor:get("system", "ntp", "synced")
+  uci_cursor:unload("system")
+  if synced == "1" and  not time_changed then
+    time_changed = true
+    local newTime = msg.newtime or "0"
+    local oldTime = msg.oldtime or "0"
+    --to calculate the time gap between ths non-synced and synced time
+    local time_diff = tonumber(newTime) - tonumber(oldTime)
+    for _, device in pairs(alldevices) do
+      device.connected_time = device.connected_time and (device.connected_time + time_diff)
+      device.disconnected_time = device.disconnected_time and (device.disconnected_time + time_diff)
+    end
+  end
+end
+
 -- Main code
 uloop.init();
 ubus_conn = ubus.connect()
@@ -1540,7 +1595,8 @@ ubus_conn:listen({ ['network.neigh'] = handle_device_update,
                    ['network.link'] = handle_device_link,
                    ['wireless.radio'] = handle_wireless_radio_update,
                    ['wireless.ssid'] = handle_wireless_ssid_update,
-                   ['wireless.accesspoint.station'] = handle_wireless_station_update, } )
+                   ['wireless.accesspoint.station'] = handle_wireless_station_update,
+                   ['time.changed'] = handle_connected_time_update, } )
 
 scan_full_wireless_status()
 scan_network_neigh_cachedstatus()

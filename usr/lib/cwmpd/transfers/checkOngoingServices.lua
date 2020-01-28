@@ -16,29 +16,45 @@ local function callOngoing()
 	return false
 end
 
--- see if the file exists
-function file_exists(file)
-  local f = io.open(file, "rb")
-  if f then f:close() end
-  return f ~= nil
+function vodPort()
+  local port
+  cursor:foreach("firewall", "helper", function(s)
+    if s["helper"] == "rtsp" then
+      port = s.dest_port
+      return true
+    end
+  end)
+  return port
 end
 
-function vodOngoing(file)
+
+function vodOngoing(dest_port)
+  if not dest_port then
+    return false
+  end
+  local match = "dport="..dest_port
+  local conntrack = io.popen("conntrack -L 2>/dev/null")
+  if not conntrack then
+    return false
+  end
+
   local vod_ongoing = false
-  if not file_exists(file) then return false end
-      cursor:foreach("firewall", "helper", function(s)
-      if s["helper"] == "rtsp" then
-          for line in io.lines(file) do
-              if string.find(line, "dport=" .. s["dest_port"]) ~= nil then
-                  vod_ongoing = true
-                  return true
-              end
-          end
-      end
-  end)
+  for line in conntrack:lines() do
+    if line:find(match) then
+      vod_ongoing = true
+      break
+    end
+  end
+  conntrack:close()
   return vod_ongoing
 end
 
-while(callOngoing() or ((cursor:get("cwmpd", "cwmpd_config", "delay_upgrade_vod") == "1") and vodOngoing("/proc/net/nf_conntrack"))) do
-	os.execute("sleep 5")
+function wait()
+  local port = vodPort()
+  local blockOnVod = cursor:get("cwmpd", "cwmpd_config", "delay_upgrade_vod") == "1"
+  while(callOngoing() or (blockOnVod and vodOngoing(port))) do
+	  os.execute("sleep 5")
+	end
 end
+
+wait()

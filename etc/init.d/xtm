@@ -13,6 +13,11 @@ app_cmd() {
     xtmctl "$@"
 }
 
+qos_cmd() {
+    [ "${XTM_DEBUG}" != 1 ] || echo "[cmd] /usr/bin/qos -q $@" 1>&2
+    /usr/bin/qos -q "$@"
+}
+
 LIB_SETUPTM="setuptm"
 if lua -e "require('${LIB_SETUPTM}')" 2> /dev/null ; then
   [ "${XTM_DEBUG}" = 1 ] && LIB_SETUPTM_DEBUG=true || LIB_SETUPTM_DEBUG=false
@@ -408,6 +413,7 @@ atm_start() {
     then
         echo "WARNING: Interface $devname was not created. Check your uci configuration."
     fi
+    qos_cmd device $devname
 }
 
 ptm_start() {
@@ -429,6 +435,7 @@ ptm_start() {
     then
         echo "WARNING: Interface $devname was not created. Check your uci configuration."
     fi
+    qos_cmd device $devname
 }
 
 xtm_configure_start() {
@@ -459,12 +466,20 @@ xtm_configure_stop() {
 }
 
 start() {
+    lock /var/lock/xtm.lock
+    if [ "$(uci_get_state xtm state status stopped)" = "started" ]; then
+       lock -u /var/lock/xtm.lock
+       return
+    fi
+
     if [ ! -c /dev/bcmxtmcfg0 ]; then
         mknod /dev/bcmxtmcfg0 c $XTM_CFG_MAJOR 0
     fi
 
     if $(xdslctl info | grep -q "Showtime") || ([ -e "/usr/bin/xdslctl1" ] && $(xdslctl1 info | grep -q "Showtime")); then
         xtm_configure_start
+        uci_revert_state xtm state status
+        uci_set_state xtm state status started
     else
         if [ -e "/usr/bin/xdslctl1" ]; then
           app_cmd start --bondingenable
@@ -480,9 +495,23 @@ start() {
         do
             app_cmd operate intf --state "$portid" enable
         done
+        uci_set_state xtm state '' state
     fi
+
+    lock -u /var/lock/xtm.lock
 }
 
 stop() {
+    lock /var/lock/xtm.lock
+    if [ "$(uci_get_state xtm state status stopped)" = "stopped" ]; then
+       lock -u /var/lock/xtm.lock
+       return
+    fi
+
     xtm_configure_stop
+    # xtm.state is deleted in xtm_configure_stop
+    uci_set_state xtm state '' state
+    uci_set_state xtm state status stopped
+
+    lock -u /var/lock/xtm.lock
 }

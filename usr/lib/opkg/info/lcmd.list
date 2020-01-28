@@ -1,8 +1,11 @@
 /etc/init.d/lcmd
+/usr/lib/lua/lcm/execenv/native/execmon.lua
 /usr/lib/lua/lcm/execenv.lua
 /usr/lib/lua/lcm/execenv/native/opkg.lua
 /usr/lib/lua/lcm/execenv/native/ipk.lua
 /usr/lib/lua/lcm/execenv/opkg.lua
+/usr/lib/lua/lcm/execenv/native/lxc_pid.lua
+/usr/lib/lua/lcm/execenv/environment.lua
 /usr/lib/lua/lcm/package.lua
 /usr/lib/lua/lcm/store/storage.lua
 /usr/lib/lua/lcm/execenv/lxc_opkg.lua

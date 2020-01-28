@@ -60,29 +60,13 @@ local function validatePvc(value, object, key)
     return true
 end
 
-local intfs_over_vlan = { "wan", "video" }
-local vlan_names = {
-    ["id_wan"] = "uci.network.device.@vlan_ppp.name",
-    ["id_hfc"] = "uci.network.device.@vlan_hfc.name",
-    ["id_voip"] = "uci.network.device.@vlan_voip.name",
-    ["id_video"] = "uci.network.device.@vlan_video.name",
-}
-
 local function validateVlanID(value, object, key)
     if content_wan.wans_enable == "0" then
         local intf = string.match(key, "^id_(.*)$")
         local pattern = "^(%d+)$"
         local number = { string.match(value, pattern) }
         if #number == 1 and tonumber(number[1]) >= 2 and tonumber(number[1]) <= 4094 then
-            if content_wan.variant ~= "novas" and key ~= "id_hfc" then
-                for _,v in ipairs(intfs_over_vlan) do
-                    local id = "id_" .. v
-                    if id ~= key and object[id] == object[key] then
-                        return nil, T"Please set different VLAN ID number. the range of number is 2-4094"
-                    end
-                end
-            end
-            object["ifname_" .. intf] = proxy.get(vlan_names[key])[1].value
+            return true
         else
             return nil, T"Invalid VLAN ID, it must be a number on the range 2-4094"
         end
@@ -95,20 +79,17 @@ if mode_current == "ethernet" or mode_current == "vdsl" or mode_current == "vdsl
     mapParams = {
         id_wan = "uci.network.device.@vlan_ppp.vid",
         id_hfc = "uci.network.device.@vlan_hfc.vid",
-        id_video = "uci.network.device.@vlan_video.vid",
     }
 
     if content_wan.variant == "novas" then
         mapParams.id_voip = "uci.network.device.@vlan_voip.vid"
         mapParams.id_wan = nil
-        mapParams.id_video = nil
     end
 
     mapValid = {
         id_wan = validateVlanID,
         id_hfc = validateVlanID,
         id_voip = validateVlanID,
-        id_video = validateVlanID,
     }
 else
     cType = "PVC"
@@ -117,19 +98,11 @@ else
         wan_vci = "uci.network.interface.@wan.vci",
         vpi_wan = "uci.xtm.atmdevice.@atm_ppp.vpi",
         vci_wan = "uci.xtm.atmdevice.@atm_ppp.vci",
-        vpi_video = "uci.xtm.atmdevice.@atm_video.vpi",
-        vci_video = "uci.xtm.atmdevice.@atm_video.vci",
-        vpi_video2 = "uci.xtm.atmdevice.@atm_video2.vpi",
-        vci_video2 = "uci.xtm.atmdevice.@atm_video2.vci",
         vpi_ipoe = "uci.xtm.atmdevice.@atm_ipoe.vpi",
         vci_ipoe = "uci.xtm.atmdevice.@atm_ipoe.vci",
     }
 
     if content_wan.variant == "novas" then
-        mapParams.vpi_video = nil
-        mapParams.vci_video = nil
-        mapParams.vpi_video2 = nil
-        mapParams.vci_video2 = nil
         mapParams.vpi_ipoe = nil
         mapParams.vci_ipoe = nil
     end
@@ -137,14 +110,6 @@ else
     mapValid = {
         vpi_wan = validatePvc,
         vci_wan = function (val, object)
-            return true
-        end,
-        vpi_video = validatePvc,
-        vci_video = function (val, object)
-            return true
-        end,
-        vpi_video2 = validatePvc,
-        vci_video2 = function (val, object)
             return true
         end,
         vpi_ipoe = validatePvc,
@@ -386,7 +351,6 @@ if cType == "VLAN" and mode_current ~= "ethernet" and mode_current ~= "vdsl" the
       else
         if mode_current == "vdslvlan" then
             html[#html + 1] = ui_helper.createInputText(T"VLAN ID for PPPoE", "id_wan", content["id_wan"], attributes, helpmsg["id_wan"])
-            html[#html + 1] = ui_helper.createInputText(T"VLAN ID for Video", "id_video", content["id_video"], attributes, helpmsg["id_video"])
         end
         if mode_current == "ethernetvlan" then
             html[#html + 1] = ui_helper.createInputText(T"VLAN ID for PPPoE", "id_hfc", content["id_hfc"], attributes, helpmsg["id_hfc"])
@@ -401,7 +365,6 @@ if cType == "VLAN" and mode_current ~= "ethernet" and mode_current ~= "vdsl" the
       else
         if mode_current == "vdslvlan" then
             html[#html + 1] = ui_helper.createLabel(T"VLAN ID for PPPoE", content["id_wan"])
-            html[#html + 1] = ui_helper.createLabel(T"VLAN ID for Video", content["id_video"])
         end
         if mode_current == "ethernetvlan" then
             html[#html + 1] = ui_helper.createLabel(T"VLAN ID for PPPoE", content["id_hfc"])
@@ -411,7 +374,7 @@ if cType == "VLAN" and mode_current ~= "ethernet" and mode_current ~= "vdsl" the
     html[#html + 1] = '</fieldset>'
 elseif cType == "PVC" then
     local pvc = {}
-    local intfs_over_pvc = { "wan", "video", "video2", "ipoe" }
+    local intfs_over_pvc = { "wan", "ipoe" }
     for _,v in ipairs(intfs_over_pvc) do
         local vpi = "vpi_" .. v
         local vci = "vci_" .. v
@@ -424,8 +387,6 @@ elseif cType == "PVC" then
     if(content["wans_enable"] == '0') then
       if content_wan.variant ~= "novas" then
         html[#html + 1] = ui_helper.createInputText(T"VPI/VCI for PPPoE/PPPoA", "vpi_wan", pvc["wan"], attributes, helpmsg["vpi_wan"])
-        html[#html + 1] = ui_helper.createInputText(T"VPI/VCI for Video", "vpi_video", pvc["video"], attributes, helpmsg["vpi_video"])
-        html[#html + 1] = ui_helper.createInputText(T"VPI/VCI for Video2", "vpi_video2", pvc["video2"], attributes, helpmsg["vpi_video2"])
         html[#html + 1] = ui_helper.createInputText(T"VPI/VCI for IPoE", "vpi_ipoe", pvc["ipoe"], attributes, helpmsg["vpi_ipoe"])
       else
         html[#html + 1] = ui_helper.createInputText(T"VPI/VCI for PPPoE/PPPoA/IPoE", "vpi_wan", pvc["wan"], attributes, helpmsg["vpi_wan"])
@@ -433,8 +394,6 @@ elseif cType == "PVC" then
     else
       if content_wan.variant ~= "novas" then
         html[#html + 1] = ui_helper.createLabel(T"VPI/VCI for PPPoE/PPPoA", pvc["wan"])
-        html[#html + 1] = ui_helper.createLabel(T"VPI/VCI for Video", pvc["video"])
-        html[#html + 1] = ui_helper.createLabel(T"VPI/VCI for Video2", pvc["video2"])
         html[#html + 1] = ui_helper.createLabel(T"VPI/VCI for IPoE", pvc["ipoe"])
       else
         html[#html + 1] = ui_helper.createLabel(T"VPI/VCI for PPPoE/PPPoA/IPoE", pvc["wan"])

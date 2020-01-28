@@ -16,13 +16,6 @@ uci set network.wan.password=tpg_acs
 uci set network.wan.ifname='vlan_hfc'
 uci set network.wan.defaultroute='1'
 
-uci set network.video.auto=0
-uci set network.video.ifname=''
-uci set network.video2.auto=0
-uci set network.video2.ifname=''
-uci set network.video6.auto=0
-uci set network.video6.ifname=''
-
 uci set network.ppp.username=tpg_acs@tpg_acs
 uci set network.ppp.password=tpg_acs
 
@@ -51,7 +44,7 @@ uci -q delete qos.reclassify_25
 uci set qos.reclassify_25=reclassify
 uci set qos.reclassify_25.target='pcp_5'
 uci add_list qos.reclassify_25.srcif='loopback'
-uci set qos.reclassify_25.protocol='icmp'
+uci set qos.reclassify_25.proto='icmp'
 uci add_list qos.reclassify_25.dscp='EF'
 
 uci set mmpbxrvsipnet.sip_net.domain_name='uni-v1.tpg.com.au'
@@ -61,7 +54,6 @@ uci set mmpbxrvsipnet.sip_net.cancel_invite_timer=''
 uci set mmpbxrvsipnet.sip_net.primary_proxy_port='5060'
 uci set mmpbxrvsipnet.sip_net.secondary_proxy_port='5060'
 
-uci set mmpbx.service_clip.provisioned='0'
 uci set mmpbx.service_conference.provisioned='0'
 uci set mmpbx.service_hold.provisioned='0'
 uci set mmpbx.service_mwi_sip_profile_0.provisioned='0'

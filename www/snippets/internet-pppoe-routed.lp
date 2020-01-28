@@ -255,7 +255,12 @@ ngx.print(ui_helper.createMessages(message_helper.popMessages()))
     -- Label that shows PPP status
     html[#html + 1] = ui_helper.createLight(T"Status", nil, ppp_state_map[ppp_status], { light = { class = ppp_light_map[ppp_status] } })
     -- Switch PPP on/off
-    html[#html + 1] = ui_helper.createSwitch(T"Enabled", "uci_wan_auto", content.uci_wan_auto)
+    local attr
+    local uci_wans_enable = proxy.get("uci.wansensing.global.enable")[1].value
+    if uci_wans_enable == "1" then
+        attr = { group = { class = "hide" } }
+    end
+    html[#html + 1] = ui_helper.createSwitch(T"Enabled", "uci_wan_auto", content.uci_wan_auto, attr)
 
     -- PPP username
     local class_username = {

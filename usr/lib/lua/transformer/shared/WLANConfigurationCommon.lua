@@ -207,12 +207,17 @@ function M.getStationDataFromIface(iface, macAddress, option, default)
     for mac, data in pairs(stationInfo[ap]) do
       if mac == macAddress and data.state:match("Associated") and data.last_ssid == ssid then
         return tostring(data[option] or default)
-      else
-	return default
       end
     end
+    return default
   end
   return stationInfo[ap] or {}
+end
+
+function M.getDataFromWDS(key, option, default)
+  local wdsIdx = key:match("[%S+%_]+%_(wds%S+)%_[%da-fA-F:]+$")
+  local wdsData = conn:call("wireless.wds", "get", {}) or {}
+  return wdsData[wdsIdx] and wdsData[wdsIdx][option] and tostring(wdsData[wdsIdx][option]) or default
 end
 
 function M.commit()

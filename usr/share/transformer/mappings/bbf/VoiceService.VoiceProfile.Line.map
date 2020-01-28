@@ -180,6 +180,7 @@ local line_sip_net_map = {
             local regStatus = profiles and profiles[name] and profiles[name]["sipRegisterState"] or ""
             return ProfileRegStatus[regStatus]
         end,
+	X_000E50_DisplayName = "display_name",
         DirectoryNumber = "directory_Number",
         PhyReferenceList = function(config, name)
             local tid, id = {}, ""
@@ -235,7 +236,6 @@ local line_sip_server_map = {
             return DevRegStatus[registered]
         end,
         DirectoryNumber = "directory_Number",
-        X_000E50_DisplayName = "display_name",
         X_000E50_UserFriendlyName = "user_friendly_name",
         X_000E50_ClientAddress = function(config, name)
             local addr = registrars and registrars[name]["clientAddress"] or ""
@@ -398,6 +398,7 @@ end
 local set_line_sip_net_map = {
     Enable = setEnable,
     DirectoryNumber = true,
+    X_000E50_DisplayName = true,
     PhyReferenceList = function(binding, paramvalue)
         local stype = uci_helper.get_from_uci(binding)
         if stype ~= "profile" then
@@ -430,7 +431,6 @@ local set_line_sip_net_map = {
 local set_line_sip_server_map = {
     Enable = setEnable,
     DirectoryNumber = true,
-    X_000E50_DisplayName = true,
     X_000E50_UserFriendlyName = true,
 }
 

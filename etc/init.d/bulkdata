@@ -19,9 +19,7 @@ start () {
     mkdir -p /var/bulkdata/
     config_foreach configure_profile profile
     /usr/bin/bulkdata update $PROFILE
-    if !(grep -q "crond" $(ps) 2>/dev/null); then
-      /etc/init.d/cron start
-    fi
+    killall -0 crond 2>/dev/null || /etc/init.d/cron start
 }
 
 stop () {

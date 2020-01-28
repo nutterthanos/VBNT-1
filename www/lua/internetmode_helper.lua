@@ -1,7 +1,5 @@
 local content_helper = require ("web.content_helper")
 local wan_interface_path ="uci.network.interface.@wan."
-local video_interface_path ="uci.network.interface.@video."
-local video2_interface_path ="uci.network.interface.@video2."
 local atm_device_path = "uci.xtm.atmdevice.@atm_ppp."
 
 local content_params = {
@@ -22,10 +20,6 @@ local helper={
         operations = {
             { wan_interface_path .. "ifname", ""},
             { wan_interface_path .. "proto", ""},
-            { video_interface_path .. "ifname", ""},
-            { video_interface_path .. "auto", "0"},
-            { video2_interface_path .. "ifname", ""},
-            { video2_interface_path .. "auto", "0"},
         },
     },
     {
@@ -41,10 +35,6 @@ local helper={
             { wan_interface_path .. "ifname", ""},
             { wan_interface_path .. "vpi", ""},
             { wan_interface_path .. "vci", ""},
-            { video_interface_path .. "ifname", ""},
-            { video_interface_path .. "auto", "0"},
-            { video2_interface_path .. "ifname", ""},
-            { video2_interface_path .. "auto", "0"},
             { wan_interface_path .. "proto", "dhcp"},
             { wan_interface_path .. "metric", "1"},
             { wan_interface_path .. "reqopts", "1 3 6 43 51 58 59"},
@@ -71,10 +61,6 @@ local helper={
             { wan_interface_path .. "ifname", ""},
             { wan_interface_path .. "vpi", ""},
             { wan_interface_path .. "vci", ""},
-            { video_interface_path .. "ifname", ""},
-            { video_interface_path .. "auto", "0"},
-            { video2_interface_path .. "ifname", ""},
-            { video2_interface_path .. "auto", "0"},
             { wan_interface_path .. "proto", "pppoe"},
             { wan_interface_path .. "metric", "10"},
             { wan_interface_path .. "reqopts", ""},
@@ -103,10 +89,6 @@ local helper={
             { wan_interface_path .. "ifname", ""},
             { wan_interface_path .. "vpi", ""},
             { wan_interface_path .. "vci", ""},
-            { video_interface_path .. "ifname", ""},
-            { video_interface_path .. "auto", "0"},
-            { video2_interface_path .. "ifname", ""},
-            { video2_interface_path .. "auto", "0"},
             { wan_interface_path .. "proto", "pppoa"},
             { wan_interface_path .. "metric", "10"},
             { wan_interface_path .. "reqopts", ""},
@@ -133,10 +115,6 @@ local helper={
             { wan_interface_path .. "ifname", ""},
             { wan_interface_path .. "vpi", ""},
             { wan_interface_path .. "vci", ""},
-            { video_interface_path .. "ifname", ""},
-            { video_interface_path .. "auto", "0"},
-            { video2_interface_path .. "ifname", ""},
-            { video2_interface_path .. "auto", "0"},
             { wan_interface_path .. "proto", "static"},
             { wan_interface_path .. "metric", ""},
             { wan_interface_path .. "reqopts", ""},
@@ -176,22 +154,6 @@ local function get(wan_type)
         local ifnames = type2ifname[proto2type[v.name]]
         if ifnames and ifnames[wan_type] then
             operations[1] = { "uci.network.interface.@wan.ifname", ifnames[wan_type] }
-            if wan_type == 'adsl' and content_params.variant ~= "novas" then
-                operations[4] = { "uci.network.interface.@video.ifname", 'atm_video' }
-                operations[5] = { "uci.network.interface.@video.auto", '1' }
-                operations[6] = { "uci.network.interface.@video2.ifname", 'atm_video2' }
-                operations[7] = { "uci.network.interface.@video2.auto", '1' }
-            elseif wan_type == 'vdsl' and content_params.variant ~= "novas" then
-                operations[4] = { "uci.network.interface.@video.ifname", 'vlan_video' }
-                operations[5] = { "uci.network.interface.@video.auto", '1' }
-                operations[6] = { "uci.network.interface.@video2.ifname", '' }
-                operations[7] = { "uci.network.interface.@video2.auto", '0' }
-            else
-                operations[4] = { "uci.network.interface.@video.ifname", '' }
-                operations[5] = { "uci.network.interface.@video.auto", '0' }
-                operations[6] = { "uci.network.interface.@video2.ifname", '' }
-                operations[7] = { "uci.network.interface.@video2.auto", '0' }
-            end
         end
 
         if wan_type == "adsl" and v.name == "pppoa" then
@@ -209,8 +171,8 @@ local function get(wan_type)
                  password = "uci.network.interface.@ppp.password",
             }
             content_helper.getExactContent(content_ppp)
-            operations[19] = { "uci.network.interface.@wan.username", content_ppp.username }
-            operations[20] = { "uci.network.interface.@wan.password", content_ppp.password }
+            operations[15] = { "uci.network.interface.@wan.username", content_ppp.username }
+            operations[16] = { "uci.network.interface.@wan.password", content_ppp.password }
         end
 
     end

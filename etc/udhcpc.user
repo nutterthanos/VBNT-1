@@ -11,6 +11,7 @@ case "$1" in
 	renew|bound)
 		[ -n "$vendorinfo" ] && [ -e "/usr/bin/parsevendorinfo" ] && /usr/bin/parsevendorinfo "$INTERFACE" "$vendorinfo"
 		[ -z "$vendorinfo" ] && [ -e "/usr/bin/parsenovendorinfo" ] && /usr/bin/parsenovendorinfo "$INTERFACE" "$1"
+                [ -n "$opt125" ] && [ -e "/usr/bin/parseopt125" ] && /usr/bin/parseopt125 "$INTERFACE" "$opt125"
 		[ -n "$lease" ] && [ -e "/usr/bin/processlease" ] && /usr/bin/processlease "$INTERFACE" "$lease"
 		[ -n "$serverid" ] && [ -e "/usr/bin/processserverid" ] && /usr/bin/processserverid "$INTERFACE" "$serverid" "$ip"
 		[ -n "$opt" ] && [ -e "/usr/bin/processpassthrough" ] && /usr/bin/processpassthrough "$INTERFACE" "$opt"

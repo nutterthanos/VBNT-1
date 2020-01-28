@@ -55,11 +55,20 @@ end
 local gponl3_binding = { config = "gponl3", sectionname = "interface" }
 local function appendGPONDevices(devices)
   local veip = {}
+  local deviceFound = false
   foreach_on_uci(gponl3_binding, function(s)
     -- iterate over all Ethernet ports and check the 'wan' option
-    if s["l3dev"] and not veip[s["l3dev"]] then
-      veip[s["l3dev"]] = true
-      addDevice(devices, "ETH", s.l3dev)
+    if s.l3dev and not veip[s.l3dev] then
+      for _, dev in ipairs(devices) do
+        if dev.type == "ETH" and dev.name == s.l3dev then
+          deviceFound = true
+          break
+        end
+      end
+      if not deviceFound then
+        veip[s.l3dev] = true
+        addDevice(devices, "ETH", s.l3dev)
+      end
     end
   end)
 end
@@ -102,11 +111,21 @@ function M.entries()
   end)
   -- GPON Entries
   local veip = {}
+  local deviceFound = false
   foreach_on_uci(gponl3_binding, function(s)
     -- iterate over all Ethernet ports and check the 'wan' option
-    if s["l3dev"] and not veip[s["l3dev"]] then
-      veip[s["l3dev"]] = true
-      WANDevices[#WANDevices + 1] = "ETH|" .. s["l3dev"]
+    if s.l3dev and not veip[s.l3dev] then
+      local gponDevice = "ETH|" .. s.l3dev
+      for _, dev in ipairs(WANDevices) do
+        if dev == gponDevice then
+          deviceFound = true
+          break
+        end
+      end
+      if not deviceFound then
+        veip[s.l3dev] = true
+        WANDevices[#WANDevices + 1] = gponDevice
+      end
     end
   end)
   -- Mobiled Entries

@@ -26,15 +26,12 @@ local ssid_list = wirelessSSID_helper.getSSID()
 ');  
 
 for i,v in ipairs(ssid_list) do
-  if i <= 4 then
-    local status = "light off"
-    if(v.state == "1") then
-      status = "light green"
-    end  ngx.print('\
-  <div class="');  ngx.print(status); ngx.print('"></div>\
-    <p class="wifi-card"><strong>');  ngx.print(v.ssid); ngx.print('</strong>(');  ngx.print(v.radio); ngx.print(')</p>\
+  if i <= 4  then 
+  local status_led = v.state == "1" and "light green" or" light off"   ngx.print('\
+  <div class ="');  ngx.print(status_led); ngx.print('"></div>\
+   <p id = \'wificard_');  ngx.print(i); ngx.print('\' class="wifi-card"><strong>');  ngx.print(v.ssid); ngx.print('</strong>(');  ngx.print(v.radio); ngx.print(')</p>\
   ');  else  ngx.print('\
-    <p class="wifi-card"><strong style="margin-left:26px;font-size:30px;">...</strong></p>\
+    <p id = \'wificard_');  ngx.print(i); ngx.print('\' class="wifi-card"><strong style="margin-left:26px;font-size:30px;">...</strong></p>\
   ');  end
 end  ngx.print('\
     </div>\
@@ -46,21 +43,19 @@ end  ngx.print('\
     self.render = function() {\
       $.post("/ajax/wirelesscard.lua?auto_update=true", [tch.elementCSRFtoken()], function(data) {\
         if (data != "") {\
-          if (data.length >= 4) {\
+          if (data.length > 4) {\
             $(".wifi-card strong").attr("style", "margin-left:26px;font-size:30px;").html("...");\
             clearInterval(refreshTimer);\
           }\
-          for (i = 0; i < data.length; i++) {\
-            if ((data[i].listatus == "light green" || data[i].listatus == "light off") && (data[i].radio == \'2.4GHz\')) {\
-              $(".content").has(".wifi-card").html("<div class=\'" + data[i].listatus + "\'></div><p class = \'wifi-card\'><strong>" + data[i].ssid + "</strong>(" + data[i].radio + ")</p>");\
-            } else if (data[i].listatus == "light orange") {\
-              $(".content").has(".wifi-card").append("<div class=\'" + data[i].listatus + "\'></div><p class = \'wifi-card\'><strong>Fetching 5GHz SSID </strong><br>Please wait</p>");\
-            } else if ((data[i].listatus == "light green" || data[i].listatus == "light off") && (data[i].radio == \'5GHz\')) {\
-              $(".content").has(".wifi-card").append("<div class=\'" + data[i].listatus + "\'></div><p class = \'wifi-card\'><strong>" + data[i].ssid + "</strong>(" + data[i].radio + ")</p>");\
+          else {\
+            for (i = 0; i < data.length ; i++) {\
+              var status_light =  ((data[i].listatus == "light green" || data[i].listatus == "light off")) ? "<strong>"+data[i].ssid+"</strong>" : "<strong>Fetching 5GHz SSID </strong><br>Please wait";\
+              $("wificard_"+(i+1)).html("<div class=\'" + data[i].listatus + "\'></div><p class = \'wifi-card\'>"+status_light+"</p>");\
               clearInterval(refreshTimer);\
             }\
-          };\
-        } else {\
+          }\
+        }\
+        else {\
           clearInterval(refreshTimer);\
         }\
       }, "json");\

@@ -62,28 +62,12 @@ local function non_novas_entry(runtime, l2type)
     -- disconnect ppp and put on different interface
     x:set("network", "ppp", "auto", "0")
     if l2type == "ADSL" then
-        -- disconnect video and video2 (pppv in ADSL doesn't happen)
-        x:delete("network", "video", "ifname")
-        x:set("network", "video", "auto", "0")
-        x:delete("network", "video2", "ifname")
-        x:set("network", "video2", "auto", "0")
         -- Set Pbit value for voice to 0
         x:delete("qos","Voice","pcp")
     elseif l2type == "VDSL" then
-        -- connect video and disconnect video2
-        x:set("network", "video", "ifname", "vlan_video")
-        x:delete("network", "video", "auto")
-        x:set("network", "vlan_video", "ifname", interfaces[l2type])
-        x:delete("network", "video2", "ifname")
-        x:set("network", "video2", "auto", "0")
         -- Set Pbit value for voice to 5
         x:set("qos","Voice","pcp","5")
     elseif l2type == "ETH" then
-        -- disconnect video and video2
-        x:delete("network", "video", "ifname")
-        x:set("network", "video", "auto", "0")
-        x:delete("network", "video2", "ifname")
-        x:set("network", "video2", "auto", "0")
         -- Set Pbit value for voice to 0
         x:delete("qos","Voice","pcp")
     end
@@ -100,9 +84,6 @@ local function non_novas_entry(runtime, l2type)
     os.execute("sleep 2")
     conn:call("network", "reload", { })
     conn:call("network.interface.wan", "up", { })
-    if l2type == 'VDSL' then
-        conn:call("network.interface.video", "up", { })
-    end
     return true
 end
 

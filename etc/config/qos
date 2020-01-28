@@ -195,7 +195,6 @@ config reclassify 'reclassify_2'
 	list srcif 'lan'
 	list srcif 'Guest1'
 	list srcif 'Guest1_5GHz'
-	list srcif 'fonopen'
 	list dstif 'wan'
 
 config reclassify 'reclassify_3'
@@ -250,7 +249,7 @@ config classify 'classify_12'
 	option proto 'tcp'
 	option dstports '554'
 
-config classify 'classify_13'
+config reclassify 'reclassify_13'
 	option target 'Video'
 	option helper 'rtsp'
 
@@ -298,7 +297,7 @@ config classify 'classify_23'
 
 config reclassify 'reclassify_24'
 	option target 'CWMP'
-	option dstports '8881'
+	option dstports '7547,8881,8882'
 	list srcif 'loopback'
 	option proto 'tcp'
 

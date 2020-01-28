@@ -193,17 +193,10 @@ end
 local function differentSrpPassword(pswcfg, password)
   if password.salt and pswcfg.salt~=password.salt then
     return true
-  end 
+  end
   if password.verifier and pswcfg.verifier~=password.verifier then
     return true
   end
-end
-
-local function port_in_range(port, _from, _to)
-  if port then
-    return (_from<=port) and (port<=_to)
-  end
-  return true
 end
 
 local function updateConfig(assistant, new_config)
@@ -213,14 +206,18 @@ local function updateConfig(assistant, new_config)
             assistant._fromPort = new_config.fromPort
             assistant._toPort = new_config.toPort
         end
+        if assistant._interface ~= new_config.interface then
+          assistant._interface = new_config.interface
+        end
+        if assistant._interface6 ~= new_config.interface6 then
+          assistant._interface6 = new_config.interface6
+        end
     end
+    return changed
 end
 
 -- check if there is any change for _mode and _pswcfg
 local function checkUpdate(assistant, permanent, password)
-    if updateConfig(assistant) then
-        return true
-    end
     local pswcfg = assistant._pswcfg
     local useSrp = type(pswcfg)=="table" and type(password)=="table"
     if useSrp then
@@ -434,6 +431,9 @@ function assistant_enable(self)
             --restore_state data comes from transformer, so they are tainted
             user.srp_salt = untaint(self._restore_state.salt)
             user.srp_verifier = untaint(self._restore_state.verifier)
+            if not self._pswcfg then
+                self._pswcfg = { salt = user.srp_salt, verifier = user.srp_verifier }
+            end
             -- here we explicitly opt to set the password to an empty string
             -- this way no password is shown (but the actual password is set)
             self._psw = ""
@@ -524,7 +524,10 @@ end
 -- \returns true if expired, false if not
 -- if expired the assistant is disabled
 function assistant_checkTimeout(self)
-    local expired = not self._permanent and self.timestamp and (self.timestamp + self._timeout) < clock_gettime(CLOCK_MONOTONIC) or false
+    local expired = not self._permanent and
+                    self.timestamp and
+                    (self.timestamp + self._timeout) < clock_gettime(CLOCK_MONOTONIC) or
+                    false
     if expired then
         self:enable(false)
     end
@@ -635,6 +638,8 @@ load_config_update = function(name)
   return {
     fromPort = config.fromPort,
     toPort = config.toPort,
+    interface = config.interface,
+    interface6 = config.interface6,
   }
 end
 
@@ -697,7 +702,7 @@ function M.getAssistant(name)
     return info.assistant
 end
 
-function M:assistantNames()
+function M.assistantNames()
   local names = {}
   for name in pairs(assistants_info) do
     names[#names+1] = name

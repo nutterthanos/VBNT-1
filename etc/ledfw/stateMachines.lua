@@ -169,8 +169,20 @@ stateMachines = {
             internet_connected = {
                 network_interface_wan_ifdown = "internet_disconnected",
                 network_interface_broadband_ifdown = "internet_disconnected",
-                xdsl_0 = "internet_disconnected"
-            }
+                xdsl_0 = "internet_disconnected",
+                xdsl_1 = "internet_connected_ddbdd",
+                xdsl_2 = "internet_connected_ddbdd",
+            },
+-- Handle spurious DSL activations : do not switch to internet_disconnected state if a DSL idle (xdsl_0) is preceded by a DSL activation (xdsl_1 or xdsl_2)
+-- (e.g Can happen in ETHWAN scenario with no DSL line connected)
+-- Go back to original state when DSL idle (xdsl_0) received
+-- In the DSL WAN scenario, when DSL is up, you cannot have an activation followed by and idle
+-- 'ddbdd' stands for 'Don't Disconnect By DSL Down'
+            internet_connected_ddbdd = {
+                xdsl_0 = "internet_connected",
+                network_interface_wan_ifdown = "internet_connecting",
+                network_interface_broadband_ifdown = "internet_disconnected",
+            },
         },
         actions = {
             internet_disconnected = {
@@ -189,7 +201,11 @@ stateMachines = {
             internet_connected = {
                 netdevLedOWRT("internet:green", 'wan', 'link tx rx'),
                 staticLed("internet:red", false)
-            }
+            },
+            internet_connected_ddbdd = {
+                netdevLedOWRT("internet:green", 'wan', 'link tx rx'),
+                staticLed("internet:red", false)
+            },
 
         },
         patterns_depend_on = {

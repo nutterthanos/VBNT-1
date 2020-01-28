@@ -193,6 +193,7 @@ case "$1" in
 
 		ip_setup "$lan"
 		firewall_setup "$lan"
+		configure_dnsmasq 0
 		ubus call service event '{"type":"intercept.setup", "data":{}}'
 		exit 0
 		;;

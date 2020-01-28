@@ -257,22 +257,20 @@ adapt_banner(){
 	local _warning_msg="WARNING: Development board (EFU tag present)"
 
 	[[ ! -f "$_banner" ]] && return
-	if [[ "$1" == "1" ]]; then # Add message to banner
-		if ! grep -q "$_warning_msg" "$_banner"; then
-			if grep -q . /proc/efu/allowed; then
-				echo -ne "\n\e[1;30m\e[43m" >> "$_banner"
-				echo " " | sed -e :a -e 's/^.\{1,49\}$/& /;ta' >> "$_banner"
-				echo "$_warning_msg" | sed -e :a -e 's/^.\{1,49\}$/ & /;ta' >> "$_banner"
-				echo " " | sed -e :a -e 's/^.\{1,49\}$/ &/;ta' >> "$_banner"
-				echo "Features enabled:" | sed -e :a -e 's/^.\{1,49\}$/& /;ta' >> "$_banner"
-				echo "$(cat /proc/efu/allowed)" | sed -e 's/^/   /' | sed -e :a -e 's/^.\{1,49\}$/& /;ta' >> "$_banner"
-				echo " " | sed -e :a -e 's/^.\{1,49\}$/ &/;ta' >> "$_banner"
-				echo -ne "\e[0m" >> "$_banner"
-			fi
+	# Remove any previous message from banner
+	awk '/\x1B\[1;30m\x1B\[43m /{p=1}/\x1B\[0m /{p=0;next}!p' "$_banner" >> /tmp/banner
+	mv /tmp/banner "$_banner"
+	if [[ "$1" == "1" ]]; then # Add a new message to banner
+		if grep -q . /proc/efu/allowed; then
+			echo -ne "\n\e[1;30m\e[43m" >> "$_banner"
+			echo " " | sed -e :a -e 's/^.\{1,49\}$/& /;ta' >> "$_banner"
+			echo "$_warning_msg" | sed -e :a -e 's/^.\{1,49\}$/ & /;ta' >> "$_banner"
+			echo " " | sed -e :a -e 's/^.\{1,49\}$/ &/;ta' >> "$_banner"
+			echo "Features enabled:" | sed -e :a -e 's/^.\{1,49\}$/& /;ta' >> "$_banner"
+			echo "$(cat /proc/efu/allowed)" | sed -e 's/^/   /' | sed -e :a -e 's/^.\{1,49\}$/& /;ta' >> "$_banner"
+			echo " " | sed -e :a -e 's/^.\{1,49\}$/ &/;ta' >> "$_banner"
+			echo -ne "\e[0m " >> "$_banner"
 		fi
-	else # Remove message from banner
-		awk '/\x1B\[1;30m/{p=1}/\x1B\[0m/{p=0;next}!p&&NF' "$_banner" >> /tmp/banner
-		mv /tmp/banner "$_banner"
 	fi
 }
 
@@ -307,6 +305,21 @@ efu_handler_is_unlocked(){
 	return "$_is_unlocked"
 }
 
+efu_run_execute_handler() {
+	local config_file="$config_dir/$1"
+	local action="$2"
+	local command
+
+	json_init
+	json_load_file "$config_file"
+	json_get_var command "exec"
+	json_cleanup
+
+	if [[ -n "$command" ]]; then
+		$command $action
+	fi
+}
+
 # Function: efu_handler_apply_config
 #    Loop through all packages to unlock them or restore their states
 #    before the unlock action.
@@ -325,15 +338,18 @@ efu_handler_apply_config() {
 		[[ -d ${config_dir} ]] && _packages="$(find ${config_dir} -maxdepth 1 -type f -exec basename {} \;)"
 
 		local _pkg
+		local action
 		for _pkg in $_packages; do
 
 			if efu_handler_is_unlocked "$_pkg"; then
 				store_default_package_state "$_pkg" && unlock "$_pkg"
 				_efu_active=1
+				action="unlock"
 			else
 				restore_default_state "$_pkg"
+				action="lock"
 			fi
-
+			efu_run_execute_handler "$_pkg" "$action"
 		done
 		uci commit
 

@@ -194,73 +194,35 @@ local function get(wan_proto)
         adsl = {
             ipoe = {
                 { "uci.network.interface.@wan.ifname", "atm_ipoe" },
-                { "uci.network.interface.@video.ifname", "atm_video" },
-                { "uci.network.interface.@video.auto", "1" },
-                { "uci.network.interface.@video2.ifname", "atm_video2" },
-                { "uci.network.interface.@video2.auto", "1" },
             },
             ppp = {
                 { "uci.network.interface.@wan.ifname", "atm_ppp" },
-                { "uci.network.interface.@video.ifname", "atm_video" },
-                { "uci.network.interface.@video.auto", "1" },
-                { "uci.network.interface.@video2.ifname", "atm_video2" },
-                { "uci.network.interface.@video2.auto", "1" },
             }
         },
         vdsl = {
             ipoe = {
                 { "uci.network.interface.@wan.ifname", "ptm0" },
-                { "uci.network.device.@vlan_video.ifname", "ptm0" },
-                { "uci.network.interface.@video.ifname", "vlan_video" },
-                { "uci.network.interface.@video.auto", "1" },
-                { "uci.network.interface.@video2.ifname", "" },
-                { "uci.network.interface.@video2.auto", "0" },
             },
             ppp = {
                 { "uci.network.interface.@wan.ifname", "ptm0" },
-                { "uci.network.device.@vlan_video.ifname", "ptm0" },
-                { "uci.network.interface.@video.ifname", "vlan_video" },
-                { "uci.network.interface.@video.auto", "1" },
-                { "uci.network.interface.@video2.ifname", "" },
-                { "uci.network.interface.@video2.auto", "0" },
             },
         },
         vdslvlan = {
             ipoe = {
                 { "uci.network.device.@vlan_ppp.ifname", "ptm0" },
                 { "uci.network.interface.@wan.ifname", "vlan_ppp" },
-                { "uci.network.device.@vlan_video.ifname", "ptm0" },
-                { "uci.network.interface.@video.ifname", "vlan_video" },
-                { "uci.network.interface.@video.auto", "1" },
-                { "uci.network.interface.@video2.ifname", "" },
-                { "uci.network.interface.@video2.auto", "0" },
             },
             ppp = {
                 { "uci.network.device.@vlan_ppp.ifname", "ptm0" },
                 { "uci.network.interface.@wan.ifname", "vlan_ppp" },
-                { "uci.network.device.@vlan_video.ifname", "ptm0" },
-                { "uci.network.interface.@video.ifname", "vlan_video" },
-                { "uci.network.interface.@video.auto", "1" },
-                { "uci.network.interface.@video2.ifname", "" },
-                { "uci.network.interface.@video2.auto", "0" },
             },
         },
         ethernet = {
             ipoe = {
                 { "uci.network.interface.@wan.ifname", "eth4" },
-                { "uci.network.device.@vlan_video.ifname", "" },
-                { "uci.network.interface.@video.ifname", "vlan_video" },
-                { "uci.network.interface.@video.auto", "0" },
-                { "uci.network.interface.@video2.ifname", "" },
-                { "uci.network.interface.@video2.auto", "0" },
             },
             ppp = {
                  { "uci.network.interface.@wan.ifname", "eth4" },
-                { "uci.network.device.@vlan_video.ifname", "" },
-                { "uci.network.interface.@video.ifname", "vlan_video" },
-                { "uci.network.interface.@video.auto", "0" },
-                { "uci.network.interface.@video2.ifname", "" },
-                { "uci.network.interface.@video2.auto", "0" },
             },
         },
         ethernetvlan = {
@@ -268,21 +230,11 @@ local function get(wan_proto)
                 { "uci.network.device.@vlan_hfc.ifname", "eth4" },
                 { "uci.network.device.@vlan_hfc.auto", "1" },
                 { "uci.network.interface.@wan.ifname", "vlan_hfc" },
-                { "uci.network.device.@vlan_video.ifname", "" },
-                { "uci.network.interface.@video.ifname", "" },
-                { "uci.network.interface.@video.auto", "0" },
-                { "uci.network.interface.@video2.ifname", "" },
-                { "uci.network.interface.@video2.auto", "0" },
             },
             ppp = {
                 { "uci.network.device.@vlan_hfc.ifname", "eth4" },
                 { "uci.network.device.@vlan_hfc.auto", "1" },
                 { "uci.network.interface.@wan.ifname", "vlan_hfc" },
-                { "uci.network.device.@vlan_video.ifname", "" },
-                { "uci.network.interface.@video.ifname", "" },
-                { "uci.network.interface.@video.auto", "0" },
-                { "uci.network.interface.@video2.ifname", "" },
-                { "uci.network.interface.@video2.auto", "0" },
             },
         }
     }

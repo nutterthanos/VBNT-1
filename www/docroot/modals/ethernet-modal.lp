@@ -303,27 +303,21 @@ end
 local function validatedevIP(value, object, key)
     local valid, msg = post_helper.advancedIPValidation(value, object, key)
     if valid then
-        if match(value, "192%.168%.253%.%d") then
-            return nil, "IP ranges 192.168.253.1~192.168.253.254 is reserved for IPTV services"
-        elseif match(value, "192%.168%.252%.%d") then
-            return nil, "IP ranges 192.168.252.1~192.168.252.254 is reserved for other services (WOL)"
-        else
-            local netmask = untaint(object.localdevmask)
-            local result, nm1 = inet.validateIPv4Netmask(netmask)
-            if result then
-                for k,v in pairs(other_lan_ips) do
-                    local _, nm2 = inet.validateIPv4Netmask(other_lan_nms[k])
-                    local validate
-                    if nm1 > nm2 then
-                        validate = gVSIIN(untaint(value), netmask)
-                        result = validate(v)
-                    else
-                        validate = gVSIIN(v, other_lan_nms[k])
-                        result = validate(value)
-                    end
-                    if result then
-                        return nil, 'IP address ' .. value .. '/' .. (32-nm1) .. ' should not be overlapped with LAN IP interface ' .. k ..'(' .. v .. '/' .. (32-nm2) ..')'
-                    end
+        local netmask = untaint(object.localdevmask)
+        local result, nm1 = inet.validateIPv4Netmask(netmask)
+        if result then
+            for k,v in pairs(other_lan_ips) do
+                local _, nm2 = inet.validateIPv4Netmask(other_lan_nms[k])
+                local validate
+                if nm1 > nm2 then
+                     validate = gVSIIN(untaint(value), netmask)
+                     result = validate(v)
+                else
+                     validate = gVSIIN(v, other_lan_nms[k])
+                     result = validate(value)
+                end
+                if result then
+                    return nil, 'IP address ' .. value .. '/' .. (32-nm1) .. ' should not be overlapped with LAN IP interface ' .. k ..'(' .. v .. '/' .. (32-nm2) ..')'
                 end
             end
         end

@@ -134,6 +134,13 @@ local function execute_operation(operation, ap_name, ap_section, action_name, is
                 if value_in_wireless ~= value_to_operate then
                     logger:debug("values differ between wireless and to_operate: " .. value_in_wireless .. " and " .. value_to_operate)
                     cursor:set("wireless", ap_name, option, value_to_operate)
+                    -- Generic Fix to keep wifi_iface and wifi_ap aligned on option state, since GUI is now enabling/disabling both parameters:GHG-5273
+                    local wifi_iface = cursor:get("wireless", ap_name, "iface")
+                    if wifi_iface then
+                      cursor:set("wireless", wifi_iface, option, value_to_operate)
+                    else
+                      logger:notice("wifi-iface does NOT exist in wireless." .. ap_name)
+                    end
                     need_to_reload = true
                 else
                     logger:debug("values are the same between wireless and to_operate: " .. value_in_wireless)

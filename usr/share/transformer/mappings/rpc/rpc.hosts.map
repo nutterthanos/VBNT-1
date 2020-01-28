@@ -13,6 +13,7 @@ local tostring = tostring
 local uciHelper = mapper("ucihelper")
 local dhcpBinding = { config = "dhcp", sectionname = "host" }
 local staticLeases = {}
+local foreachOnUci = uciHelper.foreach_on_uci
 
 --rpc.hosts
 local rpc_host_ = {
@@ -175,7 +176,7 @@ end
 
 -- Extract an IP address from the given value and add it to the list
 local function extractAddress(value, addresses)
-  if value["state"] == "connected" then
+  if value["state"] == "connected" or value["state"] == "stale" then
     if addresses == "" then
       addresses = value["address"]
     else
@@ -243,35 +244,47 @@ local function extractIPv4(dev)
    return addresses
  end
 
-local function l2_check(mac)
+local wirelessBinding = { config = "wireless" }
+local function getExternalWifiL2intf()
+  local externalRadio
+  local ifName = ''
+    wirelessBinding.sectionname = "wifi-device"
+    foreachOnUci(wirelessBinding, function(s)
+      if s.type == "quantenna" then
+	externalRadio = s[".name"]
+	return false
+      end
+    end)
+    if externalRadio then
+      wirelessBinding.sectionname = "wifi-iface"
+      foreachOnUci(wirelessBinding, function(s)
+	if s.device == externalRadio and ifName == '' then
+	  ifName = s[".name"]
+	end
+      end)
+    end
+  return ifName
+end
+
+local function getWifiL2intf(mac)
   local interface
   local stations = conn:call("wireless.accesspoint.station", "get", {})
   local accesspoints = conn:call("wireless.accesspoint", "get", {})
   if stations then
     for ap, mac_addrs in pairs(stations) do
-      if hostsCache then
-        for _, data in pairs(hostsCache) do
-          if data and data["mac-address"] == mac then
-            interface = data["l2interface"]
-          end
-        end
-      end
-      if #mac_addrs > 0 then
-        for device_mac, data in pairs(mac_addrs) do
-          if match(mac,device_mac) and data and data["state"] and data["state"] ~= "Disconnected" then
-            interface = accesspoints[ap]["ssid"]
-          end
-        end
+       if mac_addrs[mac] and mac_addrs[mac]["state"] ~= "Disconnected" then
+         return accesspoints[ap]["ssid"]
       end
     end
   end
+  interface = getExternalWifiL2intf()
   return interface
 end
 
-local function extractL2Interface(dev)
+local function getL2Interface(dev)
   local intfType, macAddr = network.getExternalWifiIntfType()
   if dev and dev["mac-address"] ~= macAddr and dev["l2interface"] == intfType then
-    return l2_check(dev["mac-address"])
+    return getWifiL2intf(dev["mac-address"])
   else
     return dev["l2interface"]
   end
@@ -310,7 +323,7 @@ local function extractPort(dev)
     else
         if dev["technology"] == "ethernet" and isLanInterface(dev["interface"]) and dev["l2interface"] == intfType and dev["mac-address"] ~= macAddr then
            return ""
-       elseif dev["technology"] == "ethernet" and isLanInterface(dev["interface"]) and dev["l2interface"] ~= nil then
+       elseif dev["technology"] == "ethernet" and isLanInterface(dev["interface"]) and dev["l2interface"] ~= nil and not match(dev["l2interface"],"wl+%d") then
            local portNumber = match(dev["l2interface"],"%a*(%d+)")
            if portNumber then
                portNumber = portNumber + 1
@@ -363,7 +376,7 @@ rpc_hosts_host_i_.getall = function(mapping, key)
        IPAddress = extractIPAddresses(dev),
        IPv4 = extractIPv4(dev),
        IPv6 = extractIPv6(dev),
-       L2Interface = extractL2Interface(dev) or "",
+       L2Interface = getL2Interface(dev) or "",
        State = extractState(dev),
        Delete = "0",
        DeviceType = extractDeviceType(dev),
@@ -393,7 +406,7 @@ rpc_hosts_host_i_.get = {
     return key
   end,
   L2Interface = function(mapping, param, key)
-    return extractL2Interface(key2dev(key)) or ""
+    return getL2Interface(key2dev(key)) or ""
   end,
   L3Interface = function(mapping, param, key)
     return key2dev(key)["l3interface"] or ""
@@ -437,7 +450,7 @@ rpc_hosts_host_i_.get = {
   end,
   SSID = function(mapping, param, key)
     local dev = key2dev(key)
-    local iface = extractL2Interface(dev)
+    local iface = getL2Interface(dev)
     return iface and uciHelper.get_from_uci({ config = "wireless", sectionname = iface , option = "ssid"}) or ""
   end,
 }

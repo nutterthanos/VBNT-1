@@ -575,6 +575,20 @@ M.checkIf3GBackupIsEnabled = function()
     return enabled == "1"
 end
 
+--- Checks if an interface exists
+-- @param intf the interface name (netifd interface)
+-- @return {boolean} whether the given interface exists or not
+M.checkIfInterfaceExists = function(intf)
+    local conn = runtime.ubus
+    local status
+
+    status = conn:call("network.interface." .. intf, "status", { })
+    if status then
+        return true
+    end
+    return false
+end
+
 --- Checks if an interface given by name is up
 -- @param intf the interface name (netifd interface)
 -- @return {boolean} whether the given interface is up or not
@@ -584,6 +598,20 @@ M.checkIfInterfaceIsUp = function(intf)
 
     status = conn:call("network.interface." .. intf, "status", { })
     if status and status.up then
+        return true
+    end
+    return false
+end
+
+--- Checks if an interface given by name is enabled
+-- @param intf the interface name (netifd interface)
+-- @return {boolean} whether the given interface is enabled or not
+M.checkIfInterfaceIsEnabled = function(intf)
+    local conn = runtime.ubus
+    local status
+
+    status = conn:call("network.interface." .. intf, "status", { })
+    if status and (status.up or status.pending) then
         return true
     end
     return false
@@ -656,6 +684,10 @@ local function run_checkLinkState(intf)
             if not linkstate then
                line = line:gsub("^%s*","")
                linkstate = match(line, "^Link is%s+([^%s]+)")
+               if linkstate then
+                  linkstate = linkstate:lower()
+                  break
+               end
             end
          end
          pipe:close()

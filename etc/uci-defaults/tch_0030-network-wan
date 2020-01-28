@@ -56,32 +56,12 @@ uci set network.wan6.reqopts='23 25'
 uci set network.wan6.reqaddress=none
 uci set network.wan6.noslaaconly=1
 uci set network.wan6.ipv6=1
-uci set network.wan6.delegateRestriction='Off'
-
-uci set network.video=interface
-uci set network.video.proto=static
-uci set network.video.ipaddr=192.168.253.1
-uci set network.video.netmask=255.255.255.0
-uci set network.video.igmpversion=2
-
-uci set network.video2=interface
-uci set network.video2.proto=dhcp
-uci set network.video2.release='1'
-uci set network.video2.auto=1
-uci set network.video2.igmpversion=2
-
-uci set network.video6=interface
-uci set network.video6.ifname=@video
-uci set network.video6.proto=dhcpv6
-uci set network.video6.reqopts='23 25'
-uci set network.video6.reqaddress=none
-uci set network.video6.noslaaconly=1
 
 uci set network.vlan_ppp=device
 uci set network.vlan_ppp.type='8021q'
 uci set network.vlan_ppp.ifname='ptm0'
 uci set network.vlan_ppp.name='vlan_ppp'
-uci set network.vlan_ppp.vid='10'
+uci set network.vlan_ppp.vid='2'
 
 uci set network.vlan_hfc=device
 uci set network.vlan_hfc.type='8021q'
@@ -94,12 +74,6 @@ uci set network.vlan_voip.type='8021q'
 uci set network.vlan_voip.ifname='eth4'
 uci set network.vlan_voip.name='vlan_voip'
 uci set network.vlan_voip.vid='6'
-
-uci set network.vlan_video=device
-uci set network.vlan_video.type='8021q'
-uci set network.vlan_video.ifname='ptm0'
-uci set network.vlan_video.name='vlan_video'
-uci set network.vlan_video.vid='13'
 
 uci set network.eth4=device
 uci set network.eth4.name='eth4'

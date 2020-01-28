@@ -34,8 +34,6 @@ function M.configBridgedMode()
         "uci.network.interface.@VLAN2.",
         "uci.network.interface.@VLAN3.",
         "uci.network.interface.@pppv.",
-        "uci.network.interface.@video.",
-        "uci.network.interface.@video2.",
         "uci.network.interface.@lan.pppoerelay.",
     }
 

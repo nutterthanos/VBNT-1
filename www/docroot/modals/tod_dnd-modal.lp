@@ -1,5 +1,4 @@
-<%
--- Localization
+<%-- Localization
 gettext.textdomain('webui-core')
 
 local ui_helper = require("web.ui_helper")
@@ -52,6 +51,18 @@ for i=1 , profileCount do
   if not next(timer_data) then
     proxy.del("uci.tod.action.@dnd_profile" ..i.. ".")
     proxy.del("uci.tod.voicednd.@profile" ..i..".")
+  end
+end
+
+-- when the timer in the action section of dnd rule is empty, whole rule will be deleted.
+local voice_dnd = content_helper.convertResultToObject(tod_voicednd_path, proxy.get(tod_voicednd_path))
+for k, v in pairs (voice_dnd) do
+  local index = match(v.paramindex, "^@voicednd(%S+)")
+  local dnd_timer = proxy.get(format("uci.tod.action.@action%s.timers.", index))
+  if dnd_timer[1].value == "" then
+     proxy.del(format("uci.tod.action.@action%s." , index))
+     proxy.del(format("uci.tod.voicednd.@voicednd%s.", index))
+     proxy.apply()
   end
 end
 
@@ -170,17 +181,9 @@ local function getTodVoiceDnd()
         }
     }, --[7]
   }
-local tod_valid = {
-    ["profile"]     = gVIES(profileName),
-    ["start_time"]  = validateTime,
-    ["stop_time"]   = validateTime,
-    ["weekdays"]    = getWeekDays,
-    ["enabled"]     = vB,
-  }
 
   return {
     columns = tod_columns,
-    valid   = tod_valid,
     days    = theWeekdays(),
   }
 end
@@ -340,9 +343,8 @@ end
 
 local function onDelete(success)
   local index = success:match("voicednd(.+)")
-  proxy.del(format("uci.tod.action.@action%s.", index))
+  proxy.set(format("uci.tod.action.@action%s.timers.@1.value", index), "")
   proxy.del(format("uci.tod.timer.@timer%s.", index))
-  proxy.del(format("uci.tod.voicednd.@voicednd%s.", index))
   proxy.apply()
   return true
 end
@@ -394,10 +396,21 @@ end
 
 --To filter out action section created by ringing schedule rule
 local dnd_action = {}
+--To filter out the action sections with no timer
+local tod_without_timer = {}
 for i, v in ipairs(action_list) do
   if action_list[i].script == "voicedndscript" then
     dnd_action[#dnd_action+1] = action_list[i]
   end
+  if action_list[i]["timers.@1.value"] == "" then
+    tod_without_timer[#tod_without_timer+1] = i
+  end
+end
+
+for i = #tod_without_timer, 1, -1 do
+  table.remove(tod_data, tod_without_timer[i])
+  table.remove(tod_index, tod_without_timer[i])
+  table.remove(action_list, tod_without_timer[i])
 end
 
 for i, v in ipairs(tod_data) do
@@ -453,7 +466,7 @@ session:store("timer_data", timer_data)
     <legend><%= T"Ringing Schedule" %></legend>
     <%=ui_helper.createSwitch(T"Ringing Schedule", "todStatus", ring_data["todStatus"], nil, ring_helpmsg["todStatus"])%>
     <div id = "parent_switch""><%=ui_helper.createSwitch(T"During this time ringing is", "ringstate_enable", ring_data["profileStatus"]=="on" and '1' or'0', nil, ring_helpmsg["profileStatus"]) %></div>
-    <%=ui_helper.createTable(tod_columns, tod_data, tod_options, nil, tod_helpmsg)%>
+    <%=ui_helper.createTable(tod_columns, tod_data, tod_options, nil, nil)%>
     <%if ngx.var.request_method == "POST" and (ngx.req.get_post_args().action == "TABLE-NEW" or ngx.req.get_post_args().action == "TABLE-EDIT") then%>
       <script type="text/javascript">
         var warning = '<div class="control-group"><div style="padding-top: 12px;" class="controls"><span class="alert">'
@@ -480,9 +493,10 @@ session:store("timer_data", timer_data)
         $("#stoptime").mobiscroll().time(opt);
     });
     $("#todStatus").val() == 0?$('#tod, #parent_switch, .btn-table-new').hide():$('#tod, #parent_switch, .btn-table-new').show();
+    $('.line-edit').hide();
 
     $('.switch').change(function(){
-        $("#todStatus").val() == 0?$('#tod, #parent_switch, .btn-table-new').hide():$('#tod, #parent_switch, .btn-table-new').show();
+        $("#todStatus").val() == 0?$('#tod, #parent_switch, .btn-table-new').hide():$('#tod, #parent_switch').show();
     });
     $(".btn-table-add, .btn-table-modify").click(function() {
         // ui_helper adds dummy hidden checkbox if no checkboxes are checked. we don't need that.

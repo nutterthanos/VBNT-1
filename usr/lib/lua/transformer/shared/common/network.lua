@@ -18,11 +18,14 @@ local ethernetBinding = { config = "ethernet", sectionname = "mapping" }
 local firewallZoneBinding = { config = "firewall", sectionname = "zone" }
 local networkBinding = { config = "network" }
 local wirelessBinding = { config = "wireless" }
+local binding = {}
 
 local AF_INET = posix.AF_INET
 local emptyTable = {}
 local open = io.open
 local integratedQtnMAC = string.lower(uciHelper.get_from_uci({config = "env", sectionname = "var", option = "qtn_eth_mac"}))
+local lxcMAC = string.lower(uciHelper.get_from_uci({config = "env", sectionname = "var", option = "local_eth_mac_lxc"}))
+local match, find, sub = string.match, string.find, string.sub
 
 local intfType, macAddr, keyValue, remotelyManaged
 
@@ -175,7 +178,7 @@ function M.getHostInfo(hostData, getInfo)
   local data = hostData or conn:call("hostmanager.device", "get", emptyTable) or emptyTable
   local lanInterfaces = M.getLanInterfaces()
   for dev, info in pairs(data) do
-    if lanInterfaces[info.interface] and info["mac-address"] ~= integratedQtnMAC and checkHostTechnology(info) then
+    if lanInterfaces[info.interface] and info["mac-address"] ~= integratedQtnMAC and info["mac-address"] ~= lxcMAC and checkHostTechnology(info) then
       hosts[#hosts+1] = getInfo and getInfo(info) or dev
     end
   end
@@ -219,7 +222,7 @@ function M.setDHCPMinAddress(interface, address, commitapply)
     return nil, "Invalid IP Address"
   end
   local data = dhcp.parseDHCPData(interface)
-  if newStart < data.ipMin or newStart >= data.ipEnd then
+  if newStart < data.ipMin or newStart > data.ipEnd then
     return nil, "Invalid start address"
   end
   local newValue = newStart - data.network
@@ -492,6 +495,51 @@ function M.getExternalWifiIntfType()
     macAddr = integratedQtnMAC
   end
   return intfType, macAddr
+end
+
+-- Checks whether the value is a valid domain name.
+-- This function satisfies RFC1033 and RFC1035 so this function is not suitable for hostname validation.
+function M.domainValidation(value)
+  local count, currLabelIndex = 0, 0
+  if type(value) ~= "string" or #value == 0 or #value > 255 then
+    return nil, "Domain name cannot be empty or greater than 255 characters or non string value"
+  end
+  repeat
+    count = count + 1
+    currLabelIndex = find(value, ".", count, true)
+    local label = sub(value, count, currLabelIndex)
+    local strippedLabel = match(label, "[^%.]*")
+    if strippedLabel ~= nil then
+      if #strippedLabel == 0 or #strippedLabel > 63 then
+        return nil, "Label should not be empty or more than 63 characters"
+      end
+      local correctLabel = match(strippedLabel, "^[a-zA-z0-9][a-zA-Z0-9-_]*[a-zA-Z0-9]")
+      if #strippedLabel == 1 then
+        if not match(strippedLabel, "[a-zA-Z0-9]") then
+          return nil, "Label within domain name has invalid syntax"
+        end
+      elseif strippedLabel ~= correctLabel then
+        return nil, "Label within domain name has invalid syntax"
+      end
+    end
+    count = currLabelIndex
+  until not currLabelIndex
+  return true
+end
+
+function M.getNewSection(config, section)
+  local sectionName
+  local sectionList = {}
+  binding.config = config
+  binding.sectionname = section
+  uciHelper.foreach_on_uci(binding, function(s)
+    sectionList[s[".name"]] = true
+  end)
+  repeat
+    sectionName = uciHelper.generate_key()
+    sectionName = section .. "_" .. string.sub(sectionName, -4)
+  until not sectionList[sectionName]
+  return sectionName
 end
 
 return M

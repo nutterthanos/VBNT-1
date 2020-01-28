@@ -32,22 +32,6 @@ local nbrofqueues = {
 }
 
 local devicetype = "ETH"
-local hardware = {} --FAP/Runner/..
-
-local function check_hardware()
-  if tmhelper.file_exists("/usr/bin/xtmctl") then
-    tmhelper.dbg_printf("hardware info : BCM63xx")
-    hardware.bcm63xx = true
-    return true
-  end
-  -- pspctl presence is specific for 68xx (PON)
-  if tmhelper.file_exists("/bin/pspctl") then
-    tmhelper.dbg_printf("hardware info : BCM68xx")
-    hardware.bcm68xx = true
-    return true
-  end
-  return false
-end
 
 --- Helper function to check if the UCI boolean specifies true/false
 -- @param value The option value which needs to be checked
@@ -130,11 +114,11 @@ local function parse_ethdev_config(devtype)
   cursor:foreach("ethernet", "port", function(s)
     do_once_tm_port_init(s[".name"])
 
-    if devtype == wantype and s["wan"] then
+    if devtype == wantype and bool_is_true(s["wan"], false) then
       ethtype[s[".name"]] = wantype
       check_devconfig(config_method, s[".name"])
     end
-    if devtype == lantype and not s["wan"] then
+    if devtype == lantype and not bool_is_true(s["wan"], false) then
       ethtype[s[".name"]] = lantype
       check_devconfig(config_method, s[".name"])
     end
@@ -287,11 +271,6 @@ local function configure_ethdevice(ethdevice, classgroup, type)
         return
     end
 
-    -- BCM 68xx uses inverse priority for queues
-    if hardware.bcm68xx and weight == 0 then
-      priority = 7 - priority
-    end
-
     tmhelper.exec_tmctl("setqcfg --devtype " .. tmhelper.TM_devtype[devicetype] .. " --if " .. ethdevice ..
         " --qid " .. numclasses ..
         " --priority " .. priority ..
@@ -314,7 +293,6 @@ end
 if not tmhelper.tmctl_present() then
   return
 end
-check_hardware()
 
   -- parse the ethernet configuration associated with the lan/wan
   if parse_ethdev_config(arg[1]) == devconfigtype then

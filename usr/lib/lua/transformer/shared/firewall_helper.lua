@@ -177,7 +177,7 @@ function M.ip2mac(ubus_connect, ipFamily, ipAddr, ipConfiguration)
         for _, dev in pairs(devices) do
             if type(dev[ipFamily]) == "table" then
                 for _, ip in pairs(dev[ipFamily]) do
-                    if ip["address"] == ipAddr and ip["state"] == "connected" then
+                    if ip["address"] == ipAddr and (ip["state"] == "connected" or ip["state"] == "stale") then
                         if ipConfiguration and ip["configuration"] ~= ipConfiguration then
                             return nil
                         end

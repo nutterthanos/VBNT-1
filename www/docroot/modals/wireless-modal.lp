@@ -387,11 +387,17 @@ local wps_button_handler = setmetatable({
         ["0"] = "acl_button_pressed.sh",
     }, untaint_mt)
 
+local cddList = {
+      {"1", T"Auto"},
+      {"on", T"On"},
+      {"off", T"Off"}
+}
+
 local mapValid = {
     interface_enabled = vB,
     standard = gVIES(wifi_standard),
     sgi = gOV(vB),
-    cdd = gOV(vB),
+    cdd = gVIES(cddList),
     stbc = gOV(vB),
     outputpower = gVIES(wifipower), -- if the parameter is not included, it does not matter, this validation function will never be called
     channelwidth20 = getValidateChannelWidth(cw_20),
@@ -727,7 +733,7 @@ ngx.print(ui_helper.createMessages(message_helper.popMessages()))
         -- html[#html + 1] = ui_helper.createSwitch("Frame bursting", "framebursting", content["framebursting"], advanced)
         html[#html + 1] = ui_helper.createSwitch(T"Short Guard Interval", "sgi", content["sgi"], advanced)
         if isremman  ~= "1" then
-            html[#html + 1] = ui_helper.createSwitch(T"Cyclic-Delay Diversity", "cdd", content["cdd"], advanced)
+            html[#html + 1] = ui_helper.createInputSelect(T"Cyclic-Delay Diversity", "cdd", cddList, content["cdd"], advanced)
             html[#html + 1] = ui_helper.createSwitch(T"Space Time Block Code", "stbc", content["stbc"], advanced)
         end
         if output_change_allowed == "1" then

@@ -29,7 +29,7 @@ local exporting_alert = {
 -- If protocol version ipv4 is selected then the ipv6 address should not be allowed and vice versa.
 local function validatehostName(value, object)
   local iptype = post_helper.GetIPType(value)
-  local domainName  = post_helper.validateStringIsDomainName(value)
+  local domainName  = value and string.match(value, '[a-zA-Z]') and post_helper.validateStringIsDomainName(value)
   local wanStatus = proxy.get("rpc.network.interface.@wan6.up")
   if object["ProtocolVersion"] == "IPv4" or object["ProtocolVersionTrace"] == "IPv4" then
     if iptype == 6 or (iptype ~= 4 and not domainName) then
@@ -51,7 +51,7 @@ end
 
 local mapValid = {
     NumberOfRepetitions = getAndValidation(post_helper.getValidateNumberInRange(1, 10), post_helper.getValidateWholeNumber),
-    DataBlockSize = getAndValidation(post_helper.getValidateNumberInRange(1, 1000), post_helper.getValidateWholeNumber),
+    DataBlockSize = getAndValidation(post_helper.getValidateNumberInRange(1, 65500), post_helper.getValidateWholeNumber),
     ipAddress =  validatehostName,
     ProtocolVersion = gVIES(ip_type)
 }

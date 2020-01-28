@@ -13,3 +13,5 @@ uci -q delete web.qosclassifymodal
 uci set web.qosclassifymodal=rule
 uci set web.qosclassifymodal.target=/modals/qos-classify-modal.lp
 uci add_list web.qosclassifymodal.roles=admin
+
+uci commit web

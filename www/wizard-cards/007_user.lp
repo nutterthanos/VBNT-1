@@ -66,7 +66,7 @@ end
         html[#html+1] = ui_helper.createAlertBlock(T"In the next pages you will use the quick set-up guide to personalise your Router. Please enter a username and password to be used to gain access to your Router Management Console. It is recommended that you choose a unique password for added security.", info_attr)
         html[#html+1] = ui_helper.createMessages(message_helper.popMessages())
         html[#html+1] = ui_helper.createInputText(T"Desired Username:", "web_username", content["web_username"], nil, helpmsg["web_username"])
-        html[#html+1] = ui_helper.createInputPassword(T"Desired Password:", "web_password", "",nil, helpmsg["web_password"])
+        html[#html+1] = ui_helper.createInputPassword(T"Desired Password:", "web_password", "", {input = { onkeyup = "passwordCheck(this.value)" }}, helpmsg["web_password"])
         html[#html+1] = ui_helper.createInputPassword(T"Retype Password:", "web_password2", "",nil, helpmsg["web_password"])
         local srp_class = {
             group = { class = "hide" }
@@ -113,6 +113,32 @@ end
         upass.closest(".control-group").before(\'<div class="alert alert-error">Some parameters failed validation</div>\');\
     }\
 \
+    $(\'#web_password\').parent().after(\'<div class = "controls"><div id="Strength"></div></div>\')\
+    $(\'#web_password2\').parent().css("padding-top" , "5px")\
+\
+    function passwordCheck(password)\
+    {\
+        var level = 0;\
+\
+        //if password bigger than 6 give 1 point\
+        if (password.length >= 6) level++;\
+\
+        //if password has both lower and uppercase characters give 1 point\
+        if ( ( password.match(/[a-z]/) ) && ( password.match(/[A-Z]/) ) ) level++;\
+\
+        //if password has at least one number give 1 point\
+        if (password.match(/\\d+/)) level++;\
+\
+        //if password has at least one special caracther give 1 point\
+        if ( password.match(/[!,@,#,$,%,^,&,*,?,_,~,-,(,)]/) )  level++;\
+\
+        //if password bigger than 8 give another 1 point\
+        if (password.length >= 8) level++;\
+\
+        $(\'#Strength\').removeClass().addClass("strength" + level);\
+        return level;\
+    }\
+\
     $("#wizard-next").click(function(){\
         if ($(\'input[name="web_username"]\').is(":visible")) {\
             clear_error("web_username");\
@@ -125,22 +151,29 @@ end
             var salt = $(\'input[name="srp_salt"]\').val();\
             var verifier = $(\'input[name="srp_verifier"]\').val();\
             var validated = true;\
-            if(password !== password2) {\
-                display_error("web_password2","Passwords do not match");\
-                validated = false;\
-            }\
 \
-            if(user == "") {\
+            if(user.length == 0) {\
                 display_error("web_username", "Usrname can not be empty");\
                 validated = false;\
             }\
 \
-            if (password == "") {\
-                if (verifier.length != 512 || salt.length != 8) {\
-                    display_error("web_password","You must fill your password");\
-                    display_error("web_password2","You must fill your password");\
+            if((password.length < 12) || (passwordCheck(password)) < 5){\
+                if(password.length == 0) {\
+                    if (verifier.length != 512 || salt.length != 8) {\
+                        display_error("web_password","You must fill your password");\
+                        display_error("web_password2","You must fill your password");\
+                        validated = false\
+                    }\
+                }\
+                else {\
+                    display_error("web_password","');  ngx.print( T"Password must contain at least 12 alphanumeric characters including both upper and lower case letters," .. "<br/>" .. T"at least one number and at least one special character" ); ngx.print('");\
                     validated = false\
                 }\
+            }\
+\
+            if(password !== password2) {\
+                display_error("web_password2","Passwords do not match");\
+                validated = false;\
             }\
 \
             if (validated) {\

@@ -42,7 +42,7 @@ local function getConnectedDevices(data)
   local ipv6 = ""
   local ipv4Address = data and data.ipv4
   for _, ipv4Data in pairs(ipv4Address) do
-    if ipv4Data.state == "connected" and ipv4Data.address then
+    if (ipv4Data.state == "connected" or ipv4Data.state == "stale") and ipv4Data.address then
       ipList[ipv4Data.address] = true
       ipv4 = ipv4Data.address
       break
@@ -50,7 +50,7 @@ local function getConnectedDevices(data)
   end
   local ipv6Address = data and data.ipv6
   for _, ipv6Data in pairs(ipv6Address) do
-    if ipv6Data.state == "connected" and ipv6Data.address then
+    if (ipv6Data.state == "connected" or ipv6Data.state == "stale") and ipv6Data.address then
       ipList[ipv6Data.address] = true
       ipv6 = ipv6Data.address
       break

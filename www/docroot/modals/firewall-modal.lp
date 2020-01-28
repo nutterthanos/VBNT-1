@@ -79,6 +79,7 @@ local gVSIDIP = post_helper.getValidateStringIsDeviceIPv4
 local gOV = post_helper.getOptionalValidation
 local vSIDIP = gVSIDIP(ipdetails.gw, ipdetails.netmask)
 local vSIIv6 = post_helper.validateStringIsIPv6
+local gAV = post_helper.getAndValidation
 
 local function validatAlgSip(value, object, key)
     local ok, msg = vNES(value)
@@ -214,6 +215,11 @@ local fwrules_protocols_v6 = {
     { "all", T"all"},
 }
 
+local fwrules_direction = {
+    { "lan", T"OUT"},
+    { "wan", T"IN"},
+}
+
 local fwrule_v6_columns = {
   {
     header = "",
@@ -230,6 +236,15 @@ local fwrule_v6_columns = {
     default = "DROP",
     type = "select",
     values = fwrules_targets,
+    attr = { select = { class="span1" } },
+  },
+  {
+    header = T"Direction",
+    name = "direction_v6",
+    param = "src",
+    default = "OUT",
+    type = "select",
+    values = fwrules_direction,
     attr = { select = { class="span1" } },
   },
   {
@@ -277,9 +292,18 @@ local fwrule_v6_options = {
     createMsg = T"Add new IPv6 firewall rule",
 }
 
+local function directioncheck(direction)
+    if direction == "wan" then
+        fwrule_defaultObject.src = "wan"
+        fwrule_defaultObject.dest = "lan"
+    end
+    return true
+end
+
 local fwrule_v6_valid = {
     enabled_v6 = vB,
     target_v6 = gVIES(fwrules_targets),
+    direction_v6 = gAV(directioncheck,gVIES(fwrules_direction)),
     protocol_v6 = gVIES(fwrules_protocols_v6),
     src_ip_v6 = gOV(vSIIv6),
     src_port_v6 = gOV(vSIPR),

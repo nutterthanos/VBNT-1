@@ -228,6 +228,31 @@ local Multi_DeviceInfo_ = {
         type = "dateTime",
         description = "Schedule a reboot at the specified date and time if X_000E50_ScheduledReboot is enabled",
       },
+      X_BELGACOM_RebootTime = {
+        access = "readWrite",
+        type = "dateTime",
+        description = "Schedule a reboot at the specified date and time if X_BELGACOM_ScheduledReboot is enabled",
+      },
+      X_BELGACOM_RebootCause = {
+        access = "readOnly",
+        type = "string",
+        description = "Reboot Cause of the CPE",
+      },
+      X_BELGACOM_TotalHWReboot = {
+        access = "readOnly",
+        type = "unsignedInt",
+        description = "Counts the number of cold boot (reboot via power off) and resets the counter when the reboot reason is UPGRADE, ROLLBACK, SWOVER",
+      },
+      X_BELGACOM_TotalSWReboot = {
+        access = "readOnly",
+        type = "unsignedInt",
+        description = "Counts the number of reboot done via CRASH, BOOTP, CLI, GUI, CWMP, STS, UERR, TR64 and resets the counter when the reboot reason is UPGRADE, ROLLBACK, SWOVER",
+      },
+      X_BELGACOM_ScheduledReboot = {
+        access = "readWrite",
+        type = "boolean",
+        description = "Enables/disables the scheduled reboot",
+      },
       X_000E50_LabelMACAddress = {
         access = "readOnly",
         type = "string",
@@ -238,7 +263,7 @@ local Multi_DeviceInfo_ = {
         type = "string",
         description = "MAC address as printed on the device label",
       },
-      ["X_TELMEX-COM_FriendlyName"] = {
+      X_TELMEX_COM_FriendlyName = {
         access = "readOnly",
         type = "string",
         description = "Device Product Friendly Name",
@@ -261,6 +286,16 @@ local Multi_DeviceInfo_ = {
         access = "readWrite",
         type = "boolean",
         description = "Resetting the Wireless configurations to default",
+      },
+      X_000E50_Country = {
+        access = "readWrite",
+        type = "string",
+        description = "Specifies the country name that can be used for country specific configuration",
+      },
+      X_000E50_Customer = {
+        access = "readWrite",
+        type = "string",
+        description = "Specifies the type of customer whether residential or business",
       },
       -- VendorConfigFileNumberOfEntries
       -- automatically created when Device.DeviceInfo.VendorConfigFile.{i}. is loaded
@@ -632,7 +667,7 @@ Multi_DeviceInfo_.get = {
   X_000E50_LabelMACAddress = function()
     return getUciValue(envBinding, "rip", "eth_mac")
   end,
-  ["X_TELMEX-COM_FriendlyName"] = function()
+  X_TELMEX_COM_FriendlyName = function()
     return getUciValue(envBinding, "var", "prod_friendly_name")
   end,
   X_0876FF_NetworkMessage = function()
@@ -643,6 +678,12 @@ Multi_DeviceInfo_.get = {
   end,
   X_000E50_FactoryReset = "0",
   X_000E50_FactoryReset_Wireless = "0",
+  X_000E50_Country = function()
+    return getUciValue(envBinding, "var", "country")
+  end,
+  X_000E50_Customer = function()
+    return getUciValue(envBinding, "var", "customer")
+  end,
 }
 
 Multi_DeviceInfo_.get.X_0876FF_LabelMACAddress = Multi_DeviceInfo_.get.X_000E50_LabelMACAddress
@@ -652,6 +693,11 @@ Multi_DeviceInfo_.get.X_0876FF_ScheduledReboot = Multi_DeviceInfo_.get.X_000E50_
 Multi_DeviceInfo_.get.X_0876FF_RebootTime = Multi_DeviceInfo_.get.X_000E50_RebootTime
 Multi_DeviceInfo_.get.X_RebootCause = Multi_DeviceInfo_.get.X_000E50_RebootCause
 Multi_DeviceInfo_.get.X_FirstUseDate = Multi_DeviceInfo_.get.FirstUseDate
+Multi_DeviceInfo_.get.X_BELGACOM_RebootTime = Multi_DeviceInfo_.get.X_000E50_RebootTime
+Multi_DeviceInfo_.get.X_BELGACOM_RebootCause = Multi_DeviceInfo_.get.X_000E50_RebootCause
+Multi_DeviceInfo_.get.X_BELGACOM_TotalHWReboot = Multi_DeviceInfo_.get.X_000E50_TotalHWReboot
+Multi_DeviceInfo_.get.X_BELGACOM_TotalSWReboot = Multi_DeviceInfo_.get.X_000E50_TotalSWReboot
+Multi_DeviceInfo_.get.X_BELGACOM_ScheduledReboot = Multi_DeviceInfo_.get.X_000E50_ScheduledReboot
 
 local function setRebootTime(value)
   local ok, errmsg = rebootHelper.setRebootOptions("time", value)
@@ -759,11 +805,23 @@ Multi_DeviceInfo_.set = {
     if value == "1" then
       commitApply:newset("rpc.resetconfig.wireless.trigger")
     end
-  end
+  end,
+  X_000E50_Country = function(mapping, param, value)
+    local country = getUciValue(envBinding, "var", "country")
+    if country ~= "" then
+      local countryHelper = require("transformer.shared.countryhelper")
+      countryHelper.country_set(value, transactions, commitapply)
+    end
+  end,
+  X_000E50_Customer = function(mapping, param, value)
+    setUciValue(envBinding, "var", "customer", value)
+  end,
 }
 
 Multi_DeviceInfo_.set.X_0876FF_ScheduledReboot = Multi_DeviceInfo_.set.X_000E50_ScheduledReboot
 Multi_DeviceInfo_.set.X_0876FF_RebootTime = Multi_DeviceInfo_.set.X_000E50_RebootTime
+Multi_DeviceInfo_.set.X_BELGACOM_ScheduledReboot = Multi_DeviceInfo_.set.X_000E50_ScheduledReboot
+Multi_DeviceInfo_.set.X_BELGACOM_RebootTime = Multi_DeviceInfo_.set.X_000E50_RebootTime
 
 Multi_DeviceInfo_.commit = function()
   rebootHelper.uci_system_commit()
@@ -809,15 +867,15 @@ for _, dupli in ipairs(duplicates) do
   if dupli.objectType.name:match("^InternetGatewayDevice.") then
     dupli.objectType.parameters["X_000E50_NewSoftwareBank"] = nil
     dupli.objectType.parameters["NewSoftwareBank"] = nil
+    dupli.objectType.parameters["X_000E50_Country"] = nil
+    dupli.objectType.parameters["X_000E50_Customer"] = nil
   else
     -- Remove igd-specific parameters from device2
     dupli.objectType.parameters["ModemFirmwareVersion"] = nil
     dupli.objectType.parameters["EnabledOptions"] = nil
     dupli.objectType.parameters["DeviceLog"] = nil
-    dupli.objectType.parameters["X_000E50_ReturnToFactoryDefaultsSoft"] = nil
     dupli.objectType.parameters["X_000E50_SoftwareVersionPassiveBank"] = nil
     dupli.objectType.parameters["SpecVersion"] = nil
-    dupli.objectType.parameters["X_000E50_SwitchtoPassiveBank"] = nil
     dupli.objectType.parameters["X_0876FF_LabelMACAddress"] = nil
     dupli.objectType.parameters["X_000E50_LabelMACAddress"] = nil
     dupli.objectType.parameters["X_000E50_FactoryReset"] = nil

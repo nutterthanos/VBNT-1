@@ -139,32 +139,38 @@ local Multi_Services_VoiceService_i_VoiceProfile_i_ = {
                 access = "readWrite",
                 type = "string",
                 default = "",
+                description = "Choose SIP/PSTN network based on this value",
             },
             X_000E50_Interface = {
                 access = "readWrite",
                 type = "string",
+                description = "Allows to configure the network interface to be used for voice",
                 default = "",
             },
 	    X_000E50_ResetCode = {
 	       access = "readWrite",
 	       type = "string",
+               description = "Reset code to reset the sip network",
 	       default = "*#101",
 	    },
 
 	    X_000E50_InterDigitTimer = {
 	       access = "readWrite",
 	       type = "unsignedInt",
+               description = "open inter-digit timer value",
 	       default = "6",
 	    },
 
 	    X_000E50_ShortInterDigitTimer = {
 	       access = "readWrite",
 	       type = "unsignedInt",
+               description = "closed inter digit timer value",
 	       default = "0",
 	    },
             X_000E50_SubRegion = {
                access = "readWrite",
                type = "unsignedInt",
+               description = "To specify the country specific settings for SLIC(FXS), DAA(FXO), Voice drivers, and DSP",
                range = {
                   {
                      min = "0",
@@ -175,6 +181,7 @@ local Multi_Services_VoiceService_i_VoiceProfile_i_ = {
             X_FASTWEB_TimerT_RING = {
                 access = "readWrite",
                 type = "unsignedInt",
+                description = "Watchdog for maximum duration of ringing event when CPE is the called party",
             },
         }
     }
@@ -189,6 +196,8 @@ local conn = mapper("ubus").connect()
 local calls = {}
 local profile_helper = require("transformer.shared.profile_helper")
 local numOfFxs, numOfDect, numOfSipdev
+local regionBinding = { config = "mmpbxbrcmcountry", sectionname = "global", option = "region" }
+local regionExists = uci_helper.get_from_uci(regionBinding)
 
 local enablestatus = {
     ['0'] = "Disabled",
@@ -211,6 +220,12 @@ local patternTable = {
     ['('] = "%b()",
     ['['] = "%b[]",
     ['{'] = "%b{}"
+}
+
+local countryCode = {
+    ['SE'] = "sweden",
+    ['DK'] = "denmark",
+    ['LT'] = "etsi"
 }
 
 local binding = {}
@@ -245,11 +260,18 @@ local function countryTR104(val, countryType)
     end
 end
 
+local function mapCountryAndCode(val)
+    for code,country in pairs(countryCode) do
+        if val == country then
+            return code
+        elseif val == code then
+            return country
+        end
+    end
+end
+
 local function getCountry()
-    binding.config = "mmpbx"
-    binding.sectionname = "global"
-    binding.option = "country"
-    return uci_helper.get_from_uci(binding)
+    return uci_helper.get_from_uci({ config = "mmpbx", sectionname = "global", option = "country", default = "" })
 end
 
 local function subRegion(value)
@@ -565,16 +587,21 @@ Multi_Services_VoiceService_i_VoiceProfile_i_.get = {
         end
     end,
     Region = function()
-        binding.config = "mmpbx"
-        binding.sectionname = "global"
-        binding.option = "country"
-        local country = uci_helper.get_from_uci(binding)
-        local tr104 = countryTR104(country, "tr104")
-        if tr104 then
-            return tr104
-        else
-            return ""
-        end
+        local country = getCountry()
+          if #regionExists > 0 then
+             local getCode = mapCountryAndCode(country)
+             if getCode then
+                return getCode
+             else
+                return ""
+             end
+          end
+          local tr104 = countryTR104(country, "tr104")
+          if tr104 then
+              return tr104
+          else
+              return ""
+          end
     end,
     DigitMap = function()
         local digitMapState = uci_helper.get_from_uci(dialplanbinding)
@@ -812,8 +839,10 @@ Multi_Services_VoiceService_i_VoiceProfile_i_.set = {
             paramvalue = "Disabled"
         end
         val = enablestatus[paramvalue]
-        uci_helper.set_on_uci(binding, val, commitapply)
-        transactions[binding.config] = true
+        if uci_helper.get_from_uci(binding) ~= val then
+            uci_helper.set_on_uci(binding, val, commitapply)
+            transactions[binding.config] = true
+        end
     end,
     Name = function(mapping, paramname, paramvalue, key)
         local config, sectionname = key:match("(.*)|(.*)")
@@ -858,11 +887,22 @@ Multi_Services_VoiceService_i_VoiceProfile_i_.set = {
         end
     end,
     Region = function(mapping, paramname, paramvalue, key)
+         if #regionExists > 0 then
+           local region_helper = require("transformer.shared.regionhelper")
+           local countryFixed = getCountry()
+           local country = mapCountryAndCode(paramvalue)
+           if country and countryFixed == "" then
+	      region_helper.region_set(paramvalue, transactions, commitapply)
+           else
+              return nil, "the country code is invalid"
+           end
+           return true
+         end
          local country = countryTR104(paramvalue, "country")
          if country then
             paramvalue = country
          else
-            return nil, "the value is invalid"
+            return nil, "the country code is invalid"
          end
          binding.config = "mmpbx"
          binding.sectionname = "global"

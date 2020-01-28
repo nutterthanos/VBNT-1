@@ -22,7 +22,6 @@ start_service()
   if [ -x $MVFS_BIN ]; then
     _log "start mvfsd."
     mvfs_mkdirs
-    chmod 777 "$(dirname ${MVFS_MOUNT_DIR})"
     test -d "${MVFS_MOUNT_DIR}" && rmdir "${MVFS_MOUNT_DIR}"
     mkdir -p "${MVFS_MOUNT_DIR}"
 

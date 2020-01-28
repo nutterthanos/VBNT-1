@@ -10,11 +10,14 @@ local post_helper = require("web.post_helper")
 local content_helper = require("web.content_helper")
 local message_helper = require("web.uimessage_helper")
 local assistance = require("web.assistance")
+local path = proxy.get("uci.web.assistance.")[1].path
 local uci_assistance = "uci.web.assistance."
 local content_assistance = content_helper.convertResultToObject(uci_assistance .. "@.", proxy.get(uci_assistance))
 local timeout = content_assistance[1].timeout
 local secname = content_assistance[1].paramindex
 local assistant = assistance.getAssistant(secname)
+local interface = proxy.get(path .. "interface")[1].value
+local interface6 = proxy.get(path .. "interface6")[1].value
 local gVChkbox = post_helper.getValidateCheckboxSwitch()
 local format = string.format
 
@@ -118,6 +121,7 @@ if ngx.var.request_method == "POST" then
               }
               proxy.set(sets)
               assistant._persistent = (content["mode"] == "1")
+              assistant._timeout = assistant._persistent and -1 or 1800
            end
            if type(password) == 'table' then
                 password.salt = string.untaint(password.salt)
@@ -192,11 +196,39 @@ ngx.print(ui_helper.createMessages(message_helper.popMessages()))
            class ="monitor-ra_enabled monitor-0",
         }
     }
+    local ra_random_class = {
+        group = {
+           class ="monitor-ra_enabled monitor-1",
+        },
+        input = {
+           class = "monitor-changes",
+        }
+    }
+    local ra_psw_class = {
+        group = {
+           class ="monitor-random_psw monitor-0",
+        }
+    }
 
   html[#html + 1] = ui_helper.createCheckboxSwitch(T"Enabled", "ra_enabled", content["ra_enabled"], ra_enable_class)
   if assistant:enabled() then
+     local data = proxy.get("rpc.network.interface.@" .. interface .. ".ipaddr")
+     local wanipv4 = data and data[1] and data[1].value or ""
+     local wanipv6 = ""
+     if interface6 ~= "" then
+        data = proxy.get("rpc.network.interface.@" .. interface6 .. ".ip6addr")
+        wanipv6 = data and data[1] and data[1].value and string.match(data[1].value, "^%S+") or ""
+     end
+     local url = ""
+     local urls = {}
+     local port = assistant:port()
+     if port ~= nil and port ~= "" then
+        urls[#urls + 1] = wanipv4 ~= "" and string.format("https://%s:%s/", wanipv4, port) or nil
+        urls[#urls + 1] = wanipv6 ~= "" and string.format("https://[%s]:%s/", wanipv6, port) or nil
+        url = table.concat(urls, "<br>")
+     end
      html[#html + 1] = ui_helper.createLabel(T"Mode", mode_map2[content["mode"]])
-     html[#html + 1] = ui_helper.createLabel(T"URL", assistant:URL() or T"Not connected to the Internet")
+     html[#html + 1] = ui_helper.createLabel(T"URL", (#url ~= 0 and url) or T"Not connected to the Internet", {span = { class = "span6" }})
   else
      html[#html + 1] = ui_helper.createInputRadio(T"Mode", "mode", mode_map, content["mode"],ra_cfg_class)
      html[#html + 1] = ui_helper.createLabel(T"Mode", mode_map2[content["mode"]],ra_class)
@@ -212,10 +244,14 @@ ngx.print(ui_helper.createMessages(message_helper.popMessages()))
      html[#html + 1] = ui_helper.createLabel(T"Password", password)
      html[#html + 1] = error and ui_helper.createLabel("Error", error) or ''
   else
-     html[#html + 1] = ui_helper.createCheckboxSwitch(T"Use Random Password", "random_psw", content["random_psw"],ra_cfg_class)
+     html[#html + 1] = ui_helper.createCheckboxSwitch(T"Use Random Password", "random_psw", content["random_psw"],ra_random_class)
      html[#html + 1] = ui_helper.createLabel(T"Use Random Password", checkbox_map[content["random_psw"]],ra_class)
-     html[#html + 1] = ui_helper.createInputText(T"Password", "password", content["password"], ra_cfg_class, helpmsg["password"])
-     html[#html + 1] = ui_helper.createLabel(T"Password", password,ra_class)
+     html[#html + 1] = "<div class='monitor-ra_enabled monitor-1'>"
+     html[#html + 1] = ui_helper.createInputText(T"Password", "password", content["password"], ra_psw_class, helpmsg["password"])
+     html[#html + 1] = "</div>"
+     if content["random_psw"] == "0" then
+       html[#html + 1] = ui_helper.createLabel(T"Password", password,ra_class)
+     end
      html[#html + 1] = ui_helper.createSimpleInputHidden("salt", "")
      html[#html + 1] = ui_helper.createSimpleInputHidden("verifier", "")
   end

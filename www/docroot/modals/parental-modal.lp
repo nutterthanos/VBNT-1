@@ -18,58 +18,25 @@ local proxy = require("datamodel")
 
 -- Shortcuts to validation helpers to make lines shorter
 local vB = post_helper.validateBoolean
-local vSII = post_helper.validateStringIsIP
-local vSIM = post_helper.validateStringIsMAC
+local vSII = post_helper.getAndValidation(post_helper.validateStringIsIP, post_helper.validateLXC)
+local vSIM = post_helper.getAndValidation(post_helper.validateStringIsMAC, post_helper.validateLXC)
 local gVSLIR = post_helper.getValidateStringLengthInRange
 
 local site = ""
 
-function siteFilter(site)
-  --removes white space after the url
-  site = site and gsub(site, " ", "")
-  site = site and string.lower(site)
+function getURLDomain(site)
   --extract only domain part in URL
-  if site and site:match("://") then
-    site = site:match("//([^/]+)")
-  end
-  -- check the site has www then remove trailing path information from URL.
-  if site and site:match("www") then
-    site = site:match("%.(%S+)")
-  end
-  -- if site contains '/' then remove trailing path information from URL.
-  site = site and site:match("([^/]+)")
-  return site
+  site = site:match("[%w]+://([^/ ]*)") or site:match("([^/ ]*)") or site
+  -- check if the site starts with www then remove it from URL.
+  return site:match("^www%.(%S+)") or site
 end
 
-local function validateSiteAndDuplicateCheck(value,data,key)
-  local url = string.match(value,"([^%s]+)")
-  if url and url:match("http") then
-    url = url:match("//([^/]+)")
+local function isAcceptableURL(value)
+  if not value or value == "" then
+    return nil, T"Invalid URL"
   end
-  local success, err = validateURL(url,"http")
-  value = siteFilter(value)
-  local mac_value = data.devices_mac
-  mac_value = gsub(mac_value, "[:-]", "")
-  local siteName = session:retrieve("parental_site")
-  -- session variable duplicateCheck is used as a flag to check if Rules are duplicate
-  session:store("duplicateCheck", "")
-  if siteName then
-    for i, v in ipairs(siteName) do
-      if tonumber(data.index) ~= i then
-        v[1] = gsub(v[1], "[:-]", "")
-        if v[2] == value and mac_value == v[1] then
-          session:store("duplicateCheck", "true")
-          return nil, T"Cannot add the same site for a MAC multiple time"
-        end
-      end
-    end
-  end
-  if success then
-    return true
-  end
-  return nil,err
+  return validateURL(getURLDomain(value))
 end
-
 
 -- In UCI
 -- config 'URLfilter'
@@ -161,7 +128,7 @@ local function validateMAC(value, object, key)
 end
 
 local entries_valid = {
-    ["site"] = validateSiteAndDuplicateCheck,
+    ["site"] = isAcceptableURL,
     ["devices_mac"] = validateMAC,
 }
 
@@ -258,7 +225,7 @@ if ngx.var.request_method == "POST" then
   end
   if post_data.site and post_data.site ~= "" then
     local url = post_data.site:match("^(.*)/$") or post_data.site
-    url = siteFilter(url)
+    url = getURLDomain(url)
     proxy.set({ ["uci.parental.URLfilter.@" .. get_content_name(parental_options) .. ".site"] = url})
     proxy.apply()
   end
@@ -301,6 +268,25 @@ $("[name =\'devices_mac\']").change(function () {\
           $(this).replaceWith($(\'<input/>\',{\'type\':\'text\', \'id\':\'devices_mac\', \'name\':\'devices_mac\'}));\
     }\
 });\
+\
+function sitesEnabled() {\
+  if ($("#sites_enabled").val() == 0) {\
+    $(\'#URLfilter\').hide();\
+    $("[id=\'Add New Site\']").hide();\
+  } else {\
+    $(\'#URLfilter\').show();\
+    $("[id=\'Add New Site\']").show();\
+  }\
+}\
+\
+$(\'.switch\').change(function(){\
+  if ($("#sites_enabled").val() == 0) {\
+    sitesEnabled();\
+  }\
+});\
+\
+sitesEnabled();\
+\
 $("[name =\'device\']").change(function () {\
     if($("#device").val() == "all"){\
         $("[name =\'devices_mac\']").replaceWith($(\'<input/>\',{\'type\':\'text\', \'id\':\'devices_mac\', \'name\':\'devices_mac\'}));\

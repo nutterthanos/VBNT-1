@@ -464,7 +464,7 @@ local function splitUciSection(mapping, parentKey, section)
     end
   end
 
-  if section.dest_mac ~= "" and section.dest_ip == "" then
+  if section.dest_mac and section.dest_mac ~= "" then
     fwBinding.option = "dest_ip"         --reset dest_ip to 0.0.0.0 if mac is present
     if section["family"] == "ipv6" then
       set_on_uci(fwBinding, "::", commitapply)
@@ -583,7 +583,7 @@ local function upnpEntries(wanInterface, datamodel, parentKey)
   return upnpMappings
 end
 
-local portMapProtocols = { tcpudp = true, tcp = true, udp = true, [""] = true }
+local portMapProtocols = { tcpudp = true, tcp = true, udp = true, [""] = true , ["!icmp"] = true }
 local function includePortMap(mapping, s, parentKey, iface_zone, lan_zones)
   local proto = lower(s.proto)
   if not portMapProtocols[proto] then
@@ -643,12 +643,11 @@ local function entries(mapping, parentKey)
     end
   end)
 
-  for _,v in ipairs(redirect_sections) do
+  for _, v in ipairs(redirect_sections) do
     fwBinding.sectionname = v
 
     foreach_on_uci(fwBinding, function(s)
-      -- Do not split the rules for DMZ rule
-      if getProtoValue(s.proto) == "tcpudp" and s[".type"] ~= "dmzredirect" then
+      if getProtoValue(s.proto) == "tcpudp" then
         splitUciSection(mapping, parentKey, s)
       end
     end)
@@ -769,11 +768,11 @@ local function getInternalPort(key, portmapValues)
 end
 
 local function getProtocol(key, protocol)
-  if dmzPortMappings[key] then
-    -- for DMZ rule protocol should be shown as empty
+  local proto = protocol or getFromRule(key, "proto")
+  if dmzPortMappings[key] and proto == "!icmp" then
+    -- There is an exception that DMZ rule protocol can be "!icmp" and it should be shown as empty
     return ""
   end
-  local proto = protocol or getFromRule(key, "proto")
   if proto == "tcpudp" then
     proto = splitKey(key)
   end
@@ -828,17 +827,11 @@ local function set_internal_port(value, key)
     return
   end
 
-  -- when external port is a range value, InternalPort is same with ExternalProt,
-  -- set a ranged InternalPort to uci/iptalbs
   -- when external port is a range value, InternalPort is not same with ExternalProt,
   -- keep InternalPort value and add backupRestorWarning as we lost InternalEndPort from Legathy.
-  local startRange,endRange = v:match("^(%d+)%:(%d+)$")
-  if endRange then
-    if value == startRange then
-       value = v
-    else
-       backupRestoreWarning()
-    end
+  local startRange, endRange = v:match("^(%d+)%:(%d+)$")
+  if endRange and value ~= startRange then
+    backupRestoreWarning()
   end
   if tonumber(value) == 0 then
     -- forward to the default, dest_port becomes empty
@@ -893,14 +886,11 @@ local function set_port_data(key, new_start, new_stop)
     local value_internal = getInternalPort(key)
     if (stop ~= "0") and (stop~=start) then
       value = string.format("%s:%s", start, stop)
-      if value_internal ~= "0" and value_internal == start then
-	value_internal  = value
-      elseif value_internal ~= "0" and value_internal ~= start then
+      if value_internal ~= "0" and value_internal ~= start then
         backupRestoreWarning()
       end
     end
     setOnRule(key, 'src_dport', value)
-    setOnRule(key, "dest_port", value_internal)
     local proto = getFromRule(key, "proto")
     keyInfo[key2sectionname[key]] = { proto = proto, startPort = value, endPort = value_internal ~= "0" and value_internal or value }
   end
@@ -1092,6 +1082,10 @@ local function deleteUPnPPortmap(key)
 end
 
 local function delete(mapping, key)
+  if dmzPortMappings[key] then
+    return nil, "Delete is not supported for DMZ PortMapped entries"
+  end
+
   if upnpPortMappings[key] then
     deleteUPnPPortmap(key)
     commitapply:newdelete("upnpd")
@@ -1162,8 +1156,8 @@ local function getall(mapping, key)
     ExternalPort = port,
     ExternalPortEndRange = endRange,
     InternalPort = getInternalPort(key, portmapValues),
-    Protocol = getProtocol(key, protocol),
-    PortMappingProtocol = getProtocol(key, protocol),
+    Protocol = getProtocol(key, portmapValues.proto or ""),
+    PortMappingProtocol = getProtocol(key, portmapValues.proto or ""),
     InternalClient = portmapValues["dest_ip"] or "",
     Description = portmapValues["name"] or "",
     PortMappingDescription = portmapValues["name"] or "",

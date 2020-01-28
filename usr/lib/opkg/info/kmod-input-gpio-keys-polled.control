@@ -1,11 +1,11 @@
 Package: kmod-input-gpio-keys-polled
 Version: 4.1.38-1
-Depends: kernel (=4.1.38-1-5ff22673453f0c708ab7d1b4a31e74dd), kmod-input-polldev
+Depends: kernel (=4.1.38-1-0f56dee21d8a7cd7360c82866017c631), kmod-input-polldev
 Source: package/kernel/linux
 License: GPLv2
 Section: kernel
 Architecture: arm_cortex-a9
-Installed-Size: 3352
+Installed-Size: 3350
 Description:  Kernel module for support polled GPIO keys input device
  
  See also gpio-button-hotplug which is an alternative, lower overhead

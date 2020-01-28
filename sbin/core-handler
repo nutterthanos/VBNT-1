@@ -15,6 +15,13 @@ action="$(uci_get system @coredump[0] action nocore)"
 path="$(uci_get system @coredump[0] path /tmp)"
 reboot="$(uci_get system @coredump[0] reboot 1)"
 
+action_option="system.@coredump[0].action"
+reboot_option="system.@coredump[0].reboot"
+
+if [ -f /sbin/core-handler-lxc ]; then
+  . /sbin/core-handler-lxc
+fi
+
 if [ "$action" = "upload" ]
 then
 	url="$(uci_get system @coredump[0] url)"
@@ -48,12 +55,12 @@ case "${action}" in
 		;;
 
 	*)
-		log "core dump for pid ${pid} file ${filename} ignored due to system.coredump.action setting"
+		log "core dump for pid ${pid} file ${filename} ignored due to $action_option setting"
 		;;
 esac
 
 if [ "${reboot}" -eq 1 ]
 then
-    log "Rebooting due to core dump and system.coredump.reboot=1"
+    log "Rebooting due to core dump and $reboot_option=1"
     /sbin/reboot
 fi

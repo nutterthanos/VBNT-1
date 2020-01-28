@@ -17,8 +17,16 @@ local ledfw_status = {
   section = "status_led",
   options = { "enable" }
 }
-
 mapper("uci_1to1").registerSimpleMap(ledfw_status)
+
+-- uci.ledfw.syslog
+local ledfw_syslog = {
+  config =  config_ledfw,
+  section = "syslog",
+  options = { "trace" }
+}
+mapper("uci_1to1").registerSimpleMap(ledfw_syslog)
+
 -- uci.ledfw.led
 local ledfw_led = {
   config = config_ledfw,

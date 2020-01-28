@@ -37,6 +37,7 @@ end
 
 local logo_class = cui["nsplogo"]:match("logo%-(.+)%.") or ""
 local stylesheet = cui["nsplogo"]:match("internode") and "/css/internode.css" or "/css/gw.css"
+stylesheet = stylesheet .."?".. cui.timestamp
   ngx.print('\
 <!DOCTYPE HTML>\
 ');  ngx.print( string.format('<html lang="%s">', gettext.language()) ); ngx.print('\
@@ -45,11 +46,11 @@ local stylesheet = cui["nsplogo"]:match("internode") and "/css/internode.css" or
     <meta charset="UTF-8">\
     <meta name="CSRFtoken" content="');  ngx.print( ngx.ctx.session:getCSRFtoken() ); ngx.print('">\
     <link href="');  ngx.print( stylesheet ); ngx.print('" rel="stylesheet">\
-    <link href="/css/responsive.css" rel="stylesheet">\
-    <!--[if IE 7]><link rel="stylesheet" href="/css/font-awesome-ie7.css"><![endif]-->\
-    <script src="/js/main-min.js" ></script>\
-    <!--[if lt IE 9]> <script src="/js/media-min.js"></script> <![endif]-->\
-    <script src="/js/srp-min.js" ></script>\
+    <link href="/css/responsive.css?');  ngx.print(cui.timestamp); ngx.print('" rel="stylesheet">\
+    <!--[if IE 7]><link rel="stylesheet" href="/css/font-awesome-ie7.css?');  ngx.print(cui.timestamp); ngx.print('"><![endif]-->\
+    <script src="/js/main-min.js?');  ngx.print(cui.timestamp); ngx.print('" ></script>\
+    <!--[if lt IE 9]> <script src="/js/media-min.js?');  ngx.print(cui.timestamp); ngx.print('"></script> <![endif]-->\
+    <script src="/js/srp-min.js?');  ngx.print(cui.timestamp); ngx.print('" ></script>\
     <title>');  ngx.print( T"Login" ); ngx.print('</title>\
 </head>\
 <body>\
@@ -96,6 +97,7 @@ $(document).ready(\
   function() {\
     var triesbeforemsg = ');  ngx.print( triesbeforemsg ); ngx.print(';\
     var tries = 0;\
+    window.sessionStorage.removeItem("current_role");\
 \
     // Set the focus on the first input field\
     $(\'form:first *:input[type!=hidden]:first\').focus();\

@@ -7,4 +7,4 @@
 # basic check if QoS started
 qos_started || exit 0
 
-/usr/bin/qos -q device "${DEVICENAME}"
+/usr/bin/qos -q vlan "${DEVICENAME}"

@@ -811,7 +811,7 @@ local getters = {
     return '-1'
   end,
   X_000E50_ExternalIPv6Address = function(mapping, param, key)
-    local interface = mapping._conn:getInterfaceDhcp6(key)
+    local interface = mapping._conn:getInterface(key)
     if interface then
       local v = common.get_ubus_interface_status(interface)
       v = v and v['ipv6-address']

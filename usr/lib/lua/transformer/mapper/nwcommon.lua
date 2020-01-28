@@ -447,6 +447,19 @@ function M.get_dhcp_tag_value(passthru)
   return tagValues
 end
 
+-- Logic to retrieve the enterprise and its corresponding value of DHCP option 125
+-- passthru-> value fetched from ubus call
+function M.get_dhcp_enterprise_tag_value(passthru)
+  local enterpriseValues = {}
+  while passthru and sub(passthru,1,2) ~= "" do
+    local enterpriseNr = M.hex2Decimal(sub(passthru,1,8))
+    local len = M.hex2Decimal(sub(passthru,9,10))
+    enterpriseValues[enterpriseNr] = sub(passthru,11,(2*len)+10)
+    passthru = sub(passthru,(2*len)+11)
+  end
+  return enterpriseValues
+end
+
 function M.get_devices_for_lowerlayers()
   local allDevices = {}
   foreach_on_uci(ethBinding,function(s)
@@ -540,6 +553,7 @@ function M.loadRoutes(onlyDefault)
       route.gateway = line:match("via%s(%S+)") or "0.0.0.0"
       route.ifname = line:match("dev%s(%S+)")
       route.metric = line:match("metric%s+(%d+)%s$") or "0"
+      route.src = line:match("src%s(%S+)") or "0.0.0.0"
       key = route.destip .. route.ifname
       if onlyDefault and route.destip == "0.0.0.0/0" and not route.isLocal then
         defaultRoute = route.ifname

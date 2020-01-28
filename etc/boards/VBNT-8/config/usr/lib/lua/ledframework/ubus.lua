@@ -60,12 +60,45 @@ function M.start(cb)
         end
     end
 
+    events['dhcpcv6.option230'] = function(msg)
+        if msg and msg.subopt1 then
+           if msg.subopt1.FIA_service then
+               if msg.subopt1.FIA_service == "1" then
+                  cb('FIA_service_on_v6')
+               else
+                  cb('FIA_service_off_v6')
+               end
+           end
+           if msg.subopt1.TV_service then
+               if msg.subopt1.TV_service == "1" then
+                  cb('TV_service_on_v6')
+               else
+                  cb('TV_service_off_v6')
+               end
+           end
+        end
+    end
+
     events['network.mproxy'] = function(msg)
         if msg ~=nil and msg.state ~=nil then
             if msg.state == "started" then
                cb('mptcp_on')
             elseif msg.state == "stopped" then
                cb('mptcp_off')
+            end
+        end
+    end
+
+    events['network.moff'] = function(msg)
+        if msg ~=nil and msg.state ~=nil then
+            if msg.state == "started" then
+               cb('mptcp_on')
+            elseif msg.state == "stopped" then
+               cb('mptcp_off')
+            elseif msg.state == "connected" then
+               cb('mptcp_RA_connected')
+            elseif msg.state == "disconnected" then
+               cb('mptcp_RA_disconnected')
             end
         end
     end
@@ -85,6 +118,14 @@ function M.start(cb)
         if msg ~=nil and msg.interface ~=nil and msg.interface == "eth4" then
             if msg.action == "add" then
 --               cb('net_neigh_dummy')
+            end
+        end
+        if msg ~=nil and msg.interface ~=nil and msg.interface == "br-wan" and msg.action == "add" then
+            if msg['ipv4-address'] and msg['ipv4-address'].address then
+               cb('network_neigh_wan_ifup')
+            end
+            if msg['ipv6-address'] and msg['ipv6-address'].address then
+               cb('network_neigh_wan6_ifup')
             end
         end
     end
@@ -347,20 +388,24 @@ function M.start(cb)
 
     events['mmbrcmfxs.callstate'] = function(msg)
         if msg ~= nil then
-            if (msg.fxs_dev_0.activeLinesNumber > 0 )  then
-                cb('fxs_line1_active')
-            else
-                cb('fxs_line1_inactive')
+            if msg.fxs_dev_0 then
+               if (msg.fxs_dev_0.activeLinesNumber > 0 )  then
+                   cb('fxs_line1_active')
+               else
+                   cb('fxs_line1_inactive')
+               end
             end
-            if (msg.fxs_dev_1.activeLinesNumber > 0)  then
-                cb('fxs_line2_active')
-            else
-                cb('fxs_line2_inactive')
+            if msg.fxs_dev_1 then
+               if (msg.fxs_dev_1.activeLinesNumber > 0)  then
+                   cb('fxs_line2_active')
+               else
+                   cb('fxs_line2_inactive')
+               end
             end
-            if ((msg.fxs_dev_0.activeLinesNumber > 0) or
-                (msg.fxs_dev_1.activeLinesNumber > 0)) then
+            if ((msg.fxs_dev_0 and msg.fxs_dev_0.activeLinesNumber > 0) or
+                (msg.fxs_dev_1 and msg.fxs_dev_1.activeLinesNumber > 0)) then
                     cb('fxs_active')
-            else
+            elseif msg.fxs_dev_0 or msg.fxs_dev_1 then
                 cb('fxs_inactive')
             end
         end
@@ -427,9 +472,9 @@ function M.start(cb)
     --register for netlink events
     local nl,err = netlink.listen(function(dev, status)
         if status then
-            cb('network_device_' .. dev .. '_up')
+            cb('network_device_' .. dev:gsub('[^%w_]','') .. '_up')
         else
-            cb('network_device_' .. dev .. '_down')
+            cb('network_device_' .. dev:gsub('[^%w_]','') .. '_down')
         end
     end)
     if not nl then

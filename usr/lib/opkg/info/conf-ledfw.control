@@ -4,5 +4,5 @@ Depends: libc, libssp, librt, libpthread
 Source: feeds/custo/conf-ledfw
 Section: conf-ledfw
 Architecture: arm_cortex-a9
-Installed-Size: 30193
+Installed-Size: 47512
 Description:  A state machine based system to manage the status of the system LEDs.

@@ -22,8 +22,12 @@ setuptm_cmd() {
 }
 
 exec_cmd() {
-    [ "${ETHERNET_DEBUG}" != 1 ] || echo "[cmd] $@" 1>&2
-    "$@"
+    if [ "${ETHERNET_DEBUG}" = 1 ]; then
+      echo "[cmd] $@" 1>&2
+      "$@"
+    else
+      "$@" > /dev/null
+    fi
 }
 
 setup_flowcache() {
@@ -31,7 +35,7 @@ setup_flowcache() {
 
   [ -x "${fcctl_bin}" ] || return
   config_get_bool mcastlearn globals multicastlearning '1'
-  "${fcctl_bin}" config --mcast-learn ${mcastlearn}
+  exec_cmd "${fcctl_bin}" config --mcast-learn ${mcastlearn}
 }
 
 is_single_fap() {
@@ -53,7 +57,7 @@ scan_switch_port_nbr() {
   local nbrswitchports=$(seq 0 7)
   for i in $nbrswitchunits ; do
     for j in $nbrswitchports ; do
-      local match=$(ethswctl getifname $i $j | sed -n 's/.* unit \([0-9]\+\) port \([0-9]\+\) is \(.*\)/\1 \2 \3/p')
+      local match=$(ethswctl getifname $i $j 2>/dev/null | sed -n 's/.* unit \([0-9]\+\) port \([0-9]\+\) is \(eth[0-9]\)/\1 \2 \3/p')
       [ -z "${match}" ] && continue
       local unit=${match%% *}
       match=${match#* }
@@ -104,43 +108,44 @@ uci2wirespeed() {
 }
 
 setup_interface() {
-    . /lib/functions/phypower.sh
     local IF="$1"
     local MODE="$2"
-    local subport_suffix=""
 
+    local subport_suffix=""
     if ([ "$IF" == "eth4" ] && (ethctl $IF media-type 2>&1 | grep -q 'Interface eth4 has sub ports')); then
         subport_suffix="port 10"
     fi
+    # verify this phy can be configured
+    ethctl $IF media-type $subport_suffix &>/dev/null || return
 
-    config_get speed "$IF" speed auto
-    config_get duplex "$IF" duplex full
     config_get enable "$IF" enable 1
-    config_get pauseenable "$IF" pauseenable 0
+    if [ "$(uci2power $enable)" = "up" ]; then
+      config_get speed "$IF" speed auto
+      config_get duplex "$IF" duplex full
+      config_get pauseenable "$IF" pauseenable 0
 
-    if [ "$enable" == "1" ]; then
       local bcm_mediatype="$(uci2mediatype $speed $duplex)"
       local bcm_wirespeed="$(uci2wirespeed $speed)"
       # If we are just reloading, skip re-setting auto, since this causes link-down/up
       if !([ "$MODE" == "reload" ] && [ "$bcm_mediatype" == "auto" ] && (ethctl $IF media-type $subport_suffix 2>&1 | grep -qi 'Auto-negotiation.* enabled')); then
-        ethctl $IF media-type "$bcm_mediatype" $subport_suffix &> /dev/null
+        exec_cmd ethctl $IF media-type "$bcm_mediatype" $subport_suffix
       fi
       if !([ "$MODE" == "reload" ] && [ "$bcm_wirespeed" == "enable" ] && (ethctl $IF ethernet@wirespeed show $subport_suffix 2>&1 | grep -q 'ethernet@wirespeed is enabled')); then
-        ethctl $IF ethernet@wirespeed "$bcm_wirespeed" $subport_suffix &> /dev/null
+        exec_cmd ethctl $IF ethernet@wirespeed "$bcm_wirespeed" $subport_suffix
       fi
       # If we are just reloading, skip re-setting phy-power state, since this causes link-down/up on internal fast ethernet PHYs
       if !([ "$MODE" == "reload" ] && (ethctl $IF media-type $subport_suffix 2>&1 | grep -qi 'Link is up')); then
-        phypower_intf "$IF" `uci2power $enable`
+        phypower_intf "$IF" up
+      fi
+
+      # configure pause TX/RX direction
+      if ([ "$pauseenable" == "1" ] && !(ethswctl -c pause -i $IF 2>&1 | grep -q 'Both Tx and Rx Pause Enabled')); then
+          ethswctl -c pause -i $IF -v 2
+      elif ([ "$pauseenable" == "0" ] && !(ethswctl -c pause -i $IF 2>&1 | grep -q 'Pause Disabled')); then
+          ethswctl -c pause -i $IF -v 0
       fi
     else
-      phypower_intf "$IF" `uci2power $enable`
-    fi
-
-    # configure pause TX/RX direction
-    if ([ "$pauseenable" == "1" ] && !(ethswctl -c pause -i $IF 2>&1 | grep -q 'Both Tx and Rx Pause Enabled')); then
-        ethswctl -c pause -i $IF -v 2
-    elif ([ "$pauseenable" == "0" ] && !(ethswctl -c pause -i $IF 2>&1 | grep -q 'Pause Disabled')); then
-        ethswctl -c pause -i $IF -v 0
+      phypower_intf "$IF" down
     fi
 }
 
@@ -452,13 +457,12 @@ setup_crossbar_lanwanswitch()
   config_get eth4lanwanmode globals eth4lanwanmode 0
   ret=`ethswctl -c lanwan -p 1 2>/dev/null | grep AN`
   if (([ "$ret" = "WAN" ]&&[ $eth4lanwanmode -eq 1 ]) || ([ "$ret" = "LAN" ]&&[ $eth4lanwanmode -eq 0 ])) ; then
-     # the 2nd parameter ethx is of no use if it's with port suffix
-     ethctl eth4 phy-power down port 10
+     [ "$ret" = "WAN" ] && ethctl eth4 phy-power down port 10 || ethctl eth3 phy-power down
      sleep 1
      /etc/init.d/swmdk stop
      exec_cmd ethswctl -c lanwan -p 1 -v $eth4lanwanmode
      /etc/init.d/swmdk start
-     ethctl eth4 phy-power up port 10
+     [ "$ret" = "WAN" ] && ethctl eth3 phy-power up || ethctl eth4 phy-power up port 10
   fi
 }
 
@@ -527,7 +531,7 @@ setup() {
       setupfapbcmtm lan
     # setuprunner is used for runner platform such as 63138/6838
     elif [ -x "/usr/bin/setuprunner" ] ; then
-      exec_cmd ethswctl -c quemap -v '0xff' -q '0x76543210'  # another Broadcom hack since 5.02 (CS5582276)
+      [ -x "/bin/wanconf" ] || exec_cmd ethswctl -c quemap -v '0xff' -q '0x76543210'  # another Broadcom hack for 63xx since 5.02 (CS5582276)
       setuprunner wan
       setuprunner lan
     fi
@@ -545,6 +549,7 @@ setup() {
        setup_crossbar_lanwanswitch
     fi
 
+    . /lib/functions/phypower.sh  #required for setup_interface()
     for intf in $(get_all_l2_interfaces); do
       [ -x "/usr/bin/setupfapbcmtm" ] && setup_rx_queue_mapping $intf &
       config_get_bool wan $intf wan '0'

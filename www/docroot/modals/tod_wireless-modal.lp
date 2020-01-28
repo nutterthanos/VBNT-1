@@ -127,6 +127,8 @@ local function onAdd(success, content, onModify)
       for _, v in ipairs(tod.days) do
         insert(content.weekdays, v[1])
       end
+      content.start_time = "00:00"
+      content.stop_time = "23:59"
     else
       content.weekdays = {untaint(content.weekdays)}
     end
@@ -174,19 +176,22 @@ end
 
 local function onDelete(success)
   local index = success:match("wifitod(.+)")
-  proxy.del(format("uci.tod.ap.@ap%s.", index))
-  proxy.del(format("uci.tod.action.@action%s.", index))
+--As per the TOD functionality Ap state will revert only when the remaining configuration is present in the tod config.
+-- Only the timer list value defined in the action section has been modified as empty and the timer section has been deleted in the config.
+  proxy.set(format("%s@action%s.timers.@1.value", tod_action_path, index),"")
   proxy.del(format("uci.tod.timer.@timer%s.", index))
-  proxy.del(format("uci.tod.wifitod.@wifitod%s.", index))
   return true
 end
 
 local function onModify(index, content)
-  local days ={}
-  for i, v in ipairs(content.weekdays) do
-    days[i] = untaint(v)
+  local days = ""
+  if type(content.weekdays) == "table" then
+    for i, v in ipairs(content.weekdays) do
+      days = days..untaint(v)
+    end
+  else
+    days = untaint(content.weekdays)
   end
-  days = concat(days, ",")
   local currDay, currTime = parental_helper.getCurrentDayAndTime()
 --Check whether the selected rule is enabled and it is in active timeslot.
   if index ~= "" and content.enabled == "1" and match(days, currDay) and currTime >= content.start_time and currTime <= content.stop_time then
@@ -233,20 +238,40 @@ if ngx.var.request_method == "POST" then
 end
 
 local tod_data, tod_index = content_helper.loadTableData(tod_options.basepath, tod_columns)
+local action_list = content_helper.convertResultToObject(tod_action_path, proxy.get(tod_action_path))
+local ap_list = content_helper.convertResultToObject(tod_ap_path, proxy.get(tod_ap_path))
+
+local newlist_index = {}
+local dnd_val = 0
+for  i , v in ipairs(action_list) do
+  local param_index = v["paramindex"]:match("action(.+)")
+  dnd_val = v["paramindex"]:match("dnd(.+)") and dnd_val+1 or dnd_val
+  if param_index then
+    if v["timers.@1.value"] == "" then
+      newlist_index[#newlist_index + 1] = i-dnd_val
+    end
+  end
+end
+
+--Section to remove the TOD rule displaying in GUI which doesn't have timer section in config.
+
+for i = #newlist_index , 1 , -1 do
+  table.remove(tod_index, newlist_index[i])
+  table.remove(ap_list, newlist_index[i])
+  table.remove(tod_data, newlist_index[i])
+end
 
 local tablesessionindexes = tod_options.tableid .. ".allowedindexes"
 session:store(tablesessionindexes, tod_index)
 
-local action_list = content_helper.convertResultToObject(tod_action_path, proxy.get(tod_action_path))
 local timer_list = content_helper.convertResultToObject(tod_timer_path, proxy.get(tod_timer_path))
 local wifitod_list = content_helper.convertResultToObject(tod_wifitod_path, proxy.get(tod_wifitod_path))
-local ap_list = content_helper.convertResultToObject(tod_ap_path, proxy.get(tod_ap_path))
 local timer_data = {}
 
 --To filter out timer section created by WiFi Tod rule
 local wifitod_timer = {}
 for i, v in ipairs(timer_list) do
-  if timer_list[i].name == "wifitod" then
+  if timer_list[i].name == "" or timer_list[i].name == "wifitod" then
     wifitod_timer[#wifitod_timer+1] = timer_list[i]
   end
 end

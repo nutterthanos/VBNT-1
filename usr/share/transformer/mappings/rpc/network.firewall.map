@@ -332,8 +332,10 @@ local get = {
         local enabled = "0"
         uci_helper.foreach_on_uci({config="firewall", sectionname="rule"}, function(s)
             if s["name"] == "Allow-Ping6" and s["family"] == "ipv6" then
-              if s["target"] == "ACCEPT" then
-                  enabled = "1"
+              enabled = s["enabled"] or "1" -- by default, a rule is enabled
+              -- if enabled is 1 break from loop
+              if enabled == "1" then
+                return false
               end
             end
         end)
@@ -405,11 +407,7 @@ local set = {
         -- Look for a rule named "Allow-Ping" or "Allow-Ping-wan" or "Allow-Ping6"and family is "ipv6" move it from enabled = 1 to 0
         uci_helper.foreach_on_uci({config="firewall", sectionname="rule"}, function(s)
             if s["name"] == "Allow-Ping6" and s["family"] == "ipv6" then
-              if paramvalue == "1" then
-                 uci_helper.set_on_uci({config="firewall", sectionname=s[".name"], option="target"}, "ACCEPT", commitapply)
-              else
-                 uci_helper.set_on_uci({config="firewall", sectionname=s[".name"], option="target"}, "DROP", commitapply)
-              end
+              uci_helper.set_on_uci({config="firewall", sectionname=s[".name"], option="enabled"}, paramvalue, commitapply)
               return true
             end
         end)

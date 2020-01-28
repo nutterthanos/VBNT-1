@@ -18,6 +18,7 @@ local current_year = (string.sub(year,1,4))
 
 local logo_class = cui["nsplogo"]:match("logo%-(.+)%.") or ""
 local stylesheet = cui["nsplogo"]:match("internode") and "/css/internode.css" or "/css/gw.css"
+stylesheet = stylesheet .."?".. cui.timestamp
 
 local function createPwdLabel(desc)
     local html = {
@@ -42,10 +43,10 @@ end
     <meta charset="UTF-8">\
     <meta name="CSRFtoken" content="');  ngx.print( ngx.ctx.session:getCSRFtoken() ); ngx.print('">\
     <link href="');  ngx.print( stylesheet ); ngx.print('" rel="stylesheet">\
-    <!--[if IE 7]><link rel="stylesheet" href="/css/font-awesome-ie7.css"><![endif]-->\
-    <script src="/js/main-min.js" ></script>\
-    <!--[if lt IE 9]> <script src="/js/media-min.js"></script> <![endif]-->\
-    <script src="/js/srp-min.js" ></script>\
+    <!--[if IE 7]><link rel="stylesheet" href="/css/font-awesome-ie7.css?');  ngx.print(cui.timestamp); ngx.print('"><![endif]-->\
+    <script src="/js/main-min.js?');  ngx.print(cui.timestamp); ngx.print('" ></script>\
+    <!--[if lt IE 9]> <script src="/js/media-min.js?');  ngx.print(cui.timestamp); ngx.print('"></script> <![endif]-->\
+    <script src="/js/srp-min.js?');  ngx.print(cui.timestamp); ngx.print('" ></script>\
     <title>');  ngx.print( T"Change password" ); ngx.print('</title>\
 </head>\
 <body>\

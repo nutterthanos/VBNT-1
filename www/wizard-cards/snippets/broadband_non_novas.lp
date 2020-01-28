@@ -83,8 +83,6 @@ local ifname2wantype = setmetatable({
 local wan_atm_uci_path = "uci.xtm.atmdevice.@atm_ppp."
 local wan_atm_uci_ipoe_path = "uci.xtm.atmdevice.@atm_ipoe."
 local wan_interface_path = "uci.network.interface.@wan."
-local video_interface_path = "uci.network.interface.@video."
-local video2_interface_path = "uci.network.interface.@video2."
 local static_dns_path = "rpc.network.interface.@wan.static_dns_servers"
 
 local mapParams = {
@@ -117,10 +115,6 @@ local mapParams = {
     pppv_username  = "uci.network.interface.@pppv.username",
     pppv_password = "uci.network.interface.@pppv.password",
     wan_peerdns = wan_interface_path .. "peerdns",
-    video_ifname = video_interface_path .. "ifname",
-    video_auto = video_interface_path .. "auto",
-    video2_ifname = video2_interface_path .. "ifname",
-    video2_auto = video2_interface_path .. "auto",
     id_vlan_vdsl = "uci.network.device.@vlan_ppp.vid",
     id_vlan_eth = "uci.network.device.@vlan_hfc.vid",
 }
@@ -348,26 +342,6 @@ local function validateWansensing(value, object, key)
     return true
 end
 
-local function getVideoConfig(value, object, key)
-    if object['wan_type'] == 'adsl' then
-        object[key] = 'atm_video'
-        object['video_auto'] = '1'
-        object['video2_ifname'] = 'atm_video2'
-        object['video2_auto'] = '1'
-    elseif object['wan_type'] == 'vdsl' then
-        object[key] = 'vlan_video'
-        object['video_auto'] = '1'
-        object['video2_ifname'] = ''
-        object['video2_auto'] = '0'
-    else
-        object[key] = ''
-        object['video_auto'] = '0'
-        object['video2_ifname'] = ''
-        object['video2_auto'] = '0'
-    end
-    return true
-end
-
 local function getWanType(content, content_wans)
     local wansensing_l2type = lower(content_wans["wansensing_l2type"])
     if wansensing_l2type == "" then wansensing_l2type = "adsl" end
@@ -391,7 +365,6 @@ local mapValid = {
     wan_static_submsk = validateWanStaticIpNetMask,
     wan_static_dns = validateDnsServers,
     wan_static_gatewayip = validateWanStaticIpAddr,
-    video_ifname = getVideoConfig,
     id_vlan_vdsl = validateVlanID,
     id_vlan_eth = validateVlanID,
     nsplink = function (value, object,key)
@@ -434,9 +407,6 @@ local mapValid = {
     wan_peerdns = function (value, object,key)
       return true
     end,
-    video_auto = vB,
-    video2_ifname = getVideoConfig,
-    video2_auto = vB,
 }
 local vB = post_helper.validateBoolean
 
@@ -606,8 +576,8 @@ local wan_proto_options_confirm = setmetatable({
                 class= "span4",
             },
         }
-        html[#html+1] = ui_helper.createInputText(T"Username: ", "wan_ppp_user_name", content["wan_ppp_user_name"], wan_ppp_class, helpmsg["wan_ppp_user_name"])
-        html[#html+1] = ui_helper.createInputPassword(T"Password:", "wan_ppp_password", content["wan_ppp_password"], wan_ppp_class, helpmsg["wan_ppp_password"])
+        html[#html+1] = ui_helper.createInputText(T"Username: ", "wan_ppp_user_name", content["ppp_username"], wan_ppp_class, helpmsg["wan_ppp_user_name"])
+        html[#html+1] = ui_helper.createInputPassword(T"Password:", "wan_ppp_password", content["ppp_password"], wan_ppp_class, helpmsg["wan_ppp_password"])
         html[#html+1] = ui_helper.createInputText(T"VPI Number: ", "wan_ppp_vpi_number", content["wan_ppp_vpi_number"], wan_pppoa_class, helpmsg["wan_ppp_vpi_number"])
         html[#html+1] = ui_helper.createInputText(T"VPI Number: ", "wan_ipoe_vpi_number", content["wan_ipoe_vpi_number"], wan_ipoe_class, helpmsg["wan_ipoe_vpi_number"])
         html[#html+1] = ui_helper.createInputText(T"VCI Number: ", "wan_ppp_vci_number", content["wan_ppp_vci_number"], wan_pppoa_class, helpmsg["wan_ppp_vci_number"])
@@ -688,12 +658,12 @@ $(document).ready(function () {\
   var wan_type = $("select[name=\'wan_type\']").val();\
   var isp = $("select[name=\'isp\']").val();\
   if (wan_type != "adsl") {\
-    $(\'option[value="pppoa"]\').hide();\
+    $(\'#wan_proto option[value="pppoa"]\').hide();\
   }\
   if (!isp || (isp == "Internode")) {\
-    $(\'option[value="pppoa"]\').hide();\
-    $(\'option[value="dhcp"]\').hide();\
-    $(\'option[value="static"]\').hide();\
+    $(\'#wan_proto option[value="pppoa"]\').hide();\
+    $(\'#wan_proto option[value="dhcp"]\').hide();\
+    $(\'#wan_proto option[value="static"]\').hide();\
     if ($("select[name=\'wan_proto\']").val() != "pppoe") {\
         $("select[name=\'wan_proto\']").val("pppoe");\
         $("select[name=\'wan_proto\']").trigger("change");\
@@ -705,9 +675,9 @@ $(\'select[name="wan_type"]\').on("change", function() {\
   var wan_type = $("select[name=\'wan_type\']").val();\
   var isp = $("select[name=\'isp\']").val();\
   if ((wan_type == "adsl") && isp && (isp != "Internode")) {\
-    $(\'option[value="pppoa"]\').show();\
+    $(\'#wan_proto option[value="pppoa"]\').show();\
   } else {\
-    $(\'option[value="pppoa"]\').hide();\
+    $(\'#wan_proto option[value="pppoa"]\').hide();\
     var wan_proto_el = $("select[name=\'wan_proto\']")\
     var wan_proto = wan_proto_el.val();\
     if (wan_proto == "pppoa") {\
@@ -721,9 +691,9 @@ $(\'select[name="isp"]\').on("change", function() {\
   var isp = $("select[name=\'isp\']").val();\
   var new_vlan = $("input[name=\'vlan_enabled\']").val();\
   if (isp == "Internode") {\
-    $(\'option[value="pppoa"]\').hide();\
-    $(\'option[value="dhcp"]\').hide();\
-    $(\'option[value="static"]\').hide();\
+    $(\'#wan_proto option[value="pppoa"]\').hide();\
+    $(\'#wan_proto option[value="dhcp"]\').hide();\
+    $(\'#wan_proto option[value="static"]\').hide();\
     if ($("select[name=\'wan_proto\']").val() != "pppoe") {\
       $("select[name=\'wan_proto\']").val("pppoe");\
       $("select[name=\'wan_proto\']").trigger("change");\
@@ -734,9 +704,9 @@ $(\'select[name="isp"]\').on("change", function() {\
     $("input[name=\'wan_ppp_user_name\']").val("@internode.on.net");\
     $("input[name=\'wan_ppp_password\']").val("default");\
   } else {\
-    if (wan_type == "adsl"){$(\'option[value="pppoa"]\').show();}\
-    $(\'option[value="dhcp"]\').show();\
-    $(\'option[value="static"]\').show();\
+    if (wan_type == "adsl"){$(\'#wan_proto option[value="pppoa"]\').show();}\
+    $(\'#wan_proto option[value="dhcp"]\').show();\
+    $(\'#wan_proto option[value="static"]\').show();\
     $("input[name=\'wan_ppp_user_name\']").val("default@iinet.net.au");\
     $("input[name=\'wan_ppp_password\']").val("default");\
     if (old_isp == isp) {\
@@ -756,7 +726,7 @@ $(\'select[name="isp"]\').on("change", function() {\
         }\
       }\
       $("input[name=\'id_vlan_eth\']").val(2);\
-      $("input[name=\'id_vlan_vdsl\']").val(10);\
+      $("input[name=\'id_vlan_vdsl\']").val(2);\
     }\
   }\
 })\

@@ -17,6 +17,7 @@
 /usr/share/transformer/mappings/clash/Command.Ss.map
 /usr/share/transformer/mappings/clash/Command.Df.map
 /usr/share/transformer/mappings/clash/Command.Traceroute.map
+/usr/bin/clash-ebtables-wrapper
 /usr/share/transformer/mappings/clash/Command.map
 /usr/share/transformer/mappings/clash/Command.Mpstat.map
 /usr/share/transformer/mappings/clash/Command.Ip.map
@@ -34,6 +35,7 @@
 /usr/share/transformer/mappings/clash/Command.Showtag.map
 /usr/share/transformer/mappings/clash/Command.Ifconfig.map
 /usr/share/transformer/mappings/clash/Command.Ifstat.map
+/usr/share/transformer/mappings/clash/Command.Ebtables.map
 /usr/share/transformer/mappings/clash/Command.Mptcpkpi.map
 /usr/share/transformer/mappings/clash/Command.Uptime.map
 /usr/share/transformer/mappings/clash/Command.Ping.map
@@ -48,6 +50,7 @@
 /usr/share/transformer/mappings/clash/Command.Tcpdump.map
 /usr/share/transformer/mappings/clash/Command.Session.Running.map
 /usr/share/transformer/mappings/clash/Command.Ip6tables.map
+/usr/share/transformer/mappings/clash/Command.Ethswctl.map
 /usr/share/transformer/mappings/clash/Command.Readlogfile.map
 /usr/share/transformer/mappings/clash/Command.Dmesg.map
 /usr/share/transformer/mappings/clash/Command.Brctl.map

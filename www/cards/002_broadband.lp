@@ -24,7 +24,6 @@ local xdsl_data = {
   dsl_linerate_down = "sys.class.xdsl.@line0.DownstreamCurrRate",
   vid_wan           = "uci.network.device.@vlan_ppp.vid",
   vid_hfc           = "uci.network.device.@vlan_hfc.vid",
-  vid_video         = "uci.network.device.@vlan_video.vid",
   vid_voip         = "uci.network.device.@vlan_voip.vid",
   variant          = "uci.env.var.iinet_variant",
 }
@@ -112,22 +111,16 @@ end
               T"DSL connected",
               "</div>"
             )
+            ngx.print("<p class='subinfos'>")
             if mode_current == "vdslvlan" then
               if xdsl_data.variant ~= "novas" then
                 ngx.print(
-                  "<p class='subinfos'>",
                   T"VLAN ID for PPPoE: ",
                   xdsl_data["vid_wan"],
                   "</br>"
                 )
-                ngx.print(
-                  T"VLAN ID for Video: ",
-                  xdsl_data["vid_video"],
-                  "</p>"
-                )
               else
                 ngx.print(
-                  "<p class='subinfos'>",
                   T"VLAN ID for PPPoE: ",
                   xdsl_data["vid_hfc"],
                   "</br>"
@@ -135,7 +128,7 @@ end
                 ngx.print(
                   T"VLAN ID for VoIP: ",
                   xdsl_data["vid_voip"],
-                  "</p>"
+                  "</br>"
                 )
               end
             end
@@ -147,16 +140,16 @@ end
               rate_up = floor(rate_up / 10) / 100
               rate_down = floor(rate_down / 10) / 100
               ngx.print(
-                "<p class=\"subinfos\">&emsp; ",
+                "&emsp; ",
                 iconUp,
                 format("%.2f Mbps", rate_up),
                 "</br>",
                 "&emsp; ",
                 iconDown,
-                format('%.2f Mbps', rate_down),
-                "</p>"
+                format('%.2f Mbps', rate_down)
               )
             end
+            ngx.print("</p>")
           elseif xdsl_data["dsl_status"] == "NoSignal" then
             ngx.print(
               "<div class='simple-desc'>",

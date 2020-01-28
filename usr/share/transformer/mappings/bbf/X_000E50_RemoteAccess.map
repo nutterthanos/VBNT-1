@@ -18,7 +18,7 @@ local Multi_Services_X_000E50_RemoteAccess_i_= {
           "Active",
           "Inactive"
         },
-        decription = "Current status of the remote assistant"
+        description = "Current status of the remote assistant"
       },
       URL = {
         access = "readOnly",

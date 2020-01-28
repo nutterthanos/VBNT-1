@@ -7,6 +7,7 @@
 #/*******************************************************************/
 config mmpbxbrcmcountry 'global'
     option trace_level '2'
+    option endpoint_trace_level '2'
     option mmbrcm_priority '0'
     option rtcp '1'
 

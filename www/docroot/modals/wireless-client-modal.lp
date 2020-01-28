@@ -184,7 +184,7 @@ local MACAddress
 for _,v in ipairs(host_path_value) do
    MACAddress = format("%s",v.MACAddress)
    if clients[MACAddress] then
-     clients[MACAddress].hostname = v.HostName ~= "" and v.HostName or "Unknown-" .. v.MACAddress
+     clients[MACAddress].hostname = v.FriendlyName ~= "" and v.FriendlyName or "Unknown-" .. v.MACAddress
      if MACAddress == dyn_device then
        output_details.hostname = clients[MACAddress].hostname
      end

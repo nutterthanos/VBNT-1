@@ -79,12 +79,6 @@ local fwupgrade_pidfile = "/var/run/sysupgrade.pid"
 local fwupgrade_errfile = "/var/state/sysupgrade"
 local fwupgrade_errmsg = "/var/state/sysupgrade-msg"
 
-local nwcommon = require ("transformer.mapper.nwcommon")
-local uci_helper = mapper("ucihelper")
-local sys_binding = {config= "system", sectionname= "firmware", option= "stop_downgrade_from_gui"}
-local version_timestamp = {config= "version", sectionname= "@version[0]", option= "timestamp", extended = true}
-local sys_binding_whitelist = {config= "system", sectionname= "firmware", option= "exception"}
-
 -- Get bank type from /proc/mtd
 local function fwupgrade_get_banktype()
   local banktype = banktable.isDualBank() and "DualBank" or "SingleBank"
@@ -150,39 +144,6 @@ local function fwupgrade_start()
   end
 
   local filename = fwupgrade_location..fwupgrade_mapdata.filename
-
-  -- section to restrict downgrade functionality
-  -- downgrade restriction based on comparing timestamp values
-  local timestamp
-  local date = {}
-  local sub = string.sub
-  local downgrade_restrict = uci_helper.get_from_uci(sys_binding)
-  local whiteList =  uci_helper.get_from_uci(sys_binding_whitelist)
-  if type(whiteList) == "table" then
-   whiteList = table.concat(whiteList, " ")
-  end
-  local build_date = uci_helper.get_from_uci(version_timestamp)
-  if downgrade_restrict == "1" then
-    local parser = io.popen("bli_parser "..filename)
-    if parser then
-      local output = parser:read("*all")
-      timestamp = output:match("timestamp%:%s+(%S+)")
-      parser:close()
-    end
-    local new_build_timestamp = nwcommon.hex2Decimal(timestamp)
-    -- workaround done to solve bli_parser issue
-    -- 30 year differnce in timestamp value is added to upgrade new_build_timestamp value
-    new_build_timestamp = new_build_timestamp + (30 * 31556926)
-    local running_build_timestamp = os.time({year = sub(build_date, 1, 4), month = sub(build_date, 5, 6), day = sub(build_date, 7, 8), hour = sub(build_date, 9, 10), min = sub(build_date, 11, 12), sec = sub(build_date, 13, 14)})
-    local timestamp_diff = running_build_timestamp - new_build_timestamp
-    --timestamp difference greater than timestamp value of one day(86400), upgrade is blocked
-    if timestamp_diff > 86400  then
-      if not whiteList:find(timestamp) then
-        fwupgrade_set_error(255, "File is corrupted")
-        return
-      end
-    end
-  end
 
   -- Start sysupgrade in the background; normally this will restart the box after several seconds
   -- force GC to run to try to prevent lua from taking more memory during

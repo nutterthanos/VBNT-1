@@ -173,15 +173,6 @@ local umgr_filter = function(data)
     if name and users[name] then
         if name == "usr_guest" then
             return nil
-        elseif name == "usr_nimda" then
-            if currentuser == username then
-                return {
-                    canEdit = true,
-                    canDelete = false
-                }
-            else
-                return nil
-            end
         elseif name == "usr_admin" or currentuser == username then
             return {
                 canEdit = true,
@@ -575,6 +566,7 @@ ngx.print(ui_helper.createModalTabs(tabs))
         }\
         srp.success = generateSaltAndVerifier;\
         srp.error_message = function() {\
+            clear_error_password();\
             var upass = $(\'.modal input[name="oldpassword"]\');\
             upass.addClass("error");\
             upass.closest(".control-group").addClass("error");\

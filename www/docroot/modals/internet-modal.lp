@@ -20,11 +20,6 @@ local content_params = {
 }
 content_helper.getExactContent(content_params)
 
-local igmp_options = {
-      {"2", T"IGMPv2"},
-      {"3", T"IGMPv3"},
-}
-
 local mapParams = {
     wans_enable = "uci.wansensing.global.enable",
     wans_l2type = "uci.wansensing.global.l2type",
@@ -37,25 +32,7 @@ local mapParams = {
     pppv_ifname = "uci.network.interface.@pppv.ifname",
     atm_ulp = "uci.xtm.atmdevice.@atm_ppp.ulp",
     atm_enc = "uci.xtm.atmdevice.@atm_ppp.enc",
-    igmp_version = "uci.network.interface.@video.igmpversion",
-    igmp_version_2= "uci.network.interface.@video2.igmpversion",
 }
-
-if content_params.variant == "novas" then
-    mapParams.pppv_auto = nil
-    mapParams.pppv_ifname = nil
-    mapParams.igmp_version_2 = nil
-end
-
-local function validateIGMPversion(value, object, key)
-     local success, msg = gVIES(igmp_options)
-     if success then
-          object["igmp_version_2"] =object[key]
-          return true
-      else
-          return nil, msg
-      end
-end
 
 local function validateWansEnabled(value, object, key)
     local success, msg = vB(value)
@@ -111,15 +88,9 @@ local mapValid = {
     pppv_ifname = alwaysTrue,
     atm_ulp = alwaysTrue,
     atm_enc = alwaysTrue,
-    igmp_version = validateIGMPversion,
-    igmp_version_2 = alwaysTrue,
 }
 
 local content, helpmsg = post_helper.handleQuery(mapParams, mapValid)
-
-if content["igmp_version"]=="" then
-   content["igmp_version"]="3"
-end
 
 local bmh = require("broadbandmode_helper").get()
 local tabdata = dyntab_helper.process(bmh)
@@ -204,11 +175,6 @@ end
 
     ngx.print(html)
   ngx.print('\
-</fieldset>\
-\
-<fieldset id="igmp_version" class="advanced hide">\
-   <legend>');  ngx.print( T"IGMP version" ); ngx.print('</legend>\
-   ');  ngx.print( ui_helper.createInputRadio(T"IGMP version", "igmp_version", igmp_options, content["igmp_version"])); ngx.print('\
 </fieldset>\
 \
 ');  end   ngx.print('\

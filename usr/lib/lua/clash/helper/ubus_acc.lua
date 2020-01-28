@@ -41,11 +41,13 @@ allowed[ "mobiled.sim"                  ] = { "get" }
 allowed[ "mobiled.sim.pin"              ] = { "unlock", "unblock", "change", "enable", "disable" }
 allowed[ "mobiled.sms"                  ] = { "get" }
 allowed[ "mobiled.platform"             ] = { "get", "capabilities" }
+allowed[ "network.neigh"                ] = { "cachedstatus" }
 allowed[ "wireless"                     ] = { "reload" }
 allowed[ "wireless.accesspoint.station" ] = { "get" }
 allowed[ "wireless.radio"               ] = { "get" }
 allowed[ "wireless.radio.acs"           ] = { "rescan" }
 allowed[ "dhcp"                         ] = { "ipv4leases", "ipv6leases" }
+allowed[ "map_controller"               ] = { "dumpMapNetwork" }
 
 return allowed
 

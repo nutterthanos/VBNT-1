@@ -39,7 +39,7 @@ local usage_msg = [[
     <host> (string) Host to ping
 ]]
 
-local function ps_function(args)
+local function ping_function(args)
   args = cmd_assist.rename_args(usage_msg, args)
   -- Possibility to further rename args here
   if args["--v4"] then
@@ -59,7 +59,7 @@ end
 local command = {
   name = cmd_name,
   usage_msg = usage_msg,
-  action = ps_function,
+  action = ping_function,
 }
 
 local M = {}

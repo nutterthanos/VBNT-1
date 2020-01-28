@@ -126,13 +126,11 @@ function M.isBandSteerEnabledByIface(iface)
 end
 
 function M.canEnableBandSteer(apKey, apData, iface)
-  envBinding.option = "commonssid_suffix"
-  local suffix = uci_helper.get_from_uci(envBinding)
   if type(apKey) ~= 'string' or type(iface) ~= 'string' then
     return false, "Ap or Iface is invalid."
   end
 
-  if not apData or not next(apData) or "1" ~= tostring(apData.admin_state) and suffix ~= "" then
+  if not apData or not next(apData) or "1" ~= tostring(apData.admin_state) then
     return false, "Please enable network firstly."
   end
 
@@ -155,7 +153,7 @@ function M.canEnableBandSteer(apKey, apData, iface)
     return false, "Band steering switching node does not exist."
   end
 
-  if tostring(peerAPNode.admin_state) ~= "1" and suffix ~= "" then
+  if tostring(peerAPNode.admin_state) ~= "1" then
     return false, "Please enable network for band steering switching node firstly."
   end
 

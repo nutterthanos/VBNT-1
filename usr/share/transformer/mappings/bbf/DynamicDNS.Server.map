@@ -148,8 +148,9 @@ local function setIntervalValue(key, param, value)
 end
 
 local function setServiceName(key, param, value)
+  local defaultUrl = "http://[USERNAME]:[PASSWORD]@your.provider.net/nic/update?hostname=[DOMAIN]&myip=[IP]"
   local url = getUciValue(key, "URL")
-  if url == "" then
+  if url == "" or url == defaultUrl then
     local fileName = "/etc/ddns/services"
     local useIpv6 = getUciValue(key, "UseIpv6")
     if useIpv6 == "1" then

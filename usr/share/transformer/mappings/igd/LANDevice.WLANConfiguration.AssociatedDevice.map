@@ -249,11 +249,16 @@ local defaultValueMap = {
 
 local function getStationInfo(_, param, key, parentKey)
   local macAddress = key:match("_sta_([%da-fA-F:]+)$") or ""
-  return wlanConfigCommon.getStationDataFromIface(parentKey, macAddress, paramMap[param], defaultValueMap[param]) or {}
+  if key:match("_sta_") then
+    return wlanConfigCommon.getStationDataFromIface(parentKey, macAddress, paramMap[param], defaultValueMap[param]) or {}
+  elseif key:match("_wds") then
+    return wlanConfigCommon.getDataFromWDS(key, paramMap[param], defaultValueMap[param])
+  end
 end
 
 local function getStatus(mapping, param, key)
-  local ssid = key:match("^(%S+)_sta*")
+  local ssid = key:match("^(%S+)_sta*") or key:match("^(%S+)_wds*")
+  ssid = ssid:gsub("_remote", "") or ssid
   local ssiddata = ssid and wlanConfigCommon.getWirelessUbus("ssid", ssid)
   local state = ssiddata and ssiddata["oper_state"]
   return state and tostring(state) == "1" and "Up" or "Down"
@@ -284,15 +289,45 @@ local entriesAssociatedDevice = function(mapping, parentKey)
       end
     end
   end
+  -- To include the Repeaters listed in wireless.wds
+  local wdsDevices = conn:call("wireless.wds", "get", {}) or {}
+  local ssidData = conn:call("wireless.ssid", "get", {}) or {}
+  local iface = parentKey:gsub("_remote", "")
+  local macAddress = ssidData and ssidData[iface] and ssidData[iface]['mac_address']
+  if macAddress and wdsDevices then
+    for wdsIdx, wdsDev in pairs(wdsDevices) do
+      if wdsDev['local_mac_address'] == macAddress and wdsDev['mac_address'] then
+        entries[#entries + 1] = parentKey .. "_" .. wdsIdx .. "_" .. wdsDev['mac_address']
+      end
+    end
+  end
   return entries
+end
+
+-- Extender's MAC Address may differ in 'hostmanager.device' and 'wireless.wds'
+local function modifyMAC(mac)
+  local firstOctets, lastOctet = mac:match("([%x%x%:]+)(%x%x)$")
+  if not firstOctets and not lastOctet then
+    firstOctets = (tonumber(mac, 16) - 1)
+    firstOctets = string.format("%02x", tonumber(firstOctets))
+    return firstOctets
+  else
+    lastOctet = (tonumber(lastOctet, 16) - 1) % 256
+    if lastOctet == 255 then
+      firstOctets = modifyMAC(string.sub(firstOctets, 1, #firstOctets - 1)).. ":"
+    end
+    lastOctet = string.format("%02x", tonumber(lastOctet))
+  end
+  return tostring(firstOctets .. lastOctet)
 end
 
 local getAssociatedDevice = {
   AssociatedDeviceMACAddress = function(mapping, param, key)
-    return key:match("_sta_([%da-fA-F:]+)$") or ""
+    return key:match("([%da-fA-F:]+)$") or ""
   end,
   AssociatedDeviceIPAddress = function(mapping, param, key)
-    local macAddress = key:match("_sta_([%da-fA-F:]+)$") or ""
+    local macAddress = key:match("([%da-fA-F:]+)$") or ""
+    macAddress = key:match("_wds") and modifyMAC(macAddress) or macAddress
     local hostData = conn:call("hostmanager.device", "get", { ["mac-address"] = macAddress }) or {}
     local ipv4Address = {}
     local ipv6Address = {}
@@ -301,12 +336,12 @@ local getAssociatedDevice = {
       ipv6Address = data.ipv6 or {}
     end
     for _, info in pairs(ipv4Address) do
-      if info.state and info.state == "connected" then
+      if info.state and (info.state == "connected" or info.state == "stale") then
         return info.address or ""
       end
     end
     for _, ip6Info in pairs(ipv6Address) do
-      if ip6Info.state and ip6Info.state == "connected" then
+      if ip6Info.state and (ip6Info.state == "connected" or ip6Info.state == "stale") then
         return ip6Info.address or ""
       end
     end
@@ -324,12 +359,19 @@ local getAssociatedDevice = {
     return txRate:match("%d+") or ""
   end,
   X_OperatingStandard = function(mapping, param, key, parentKey)
-    local macAddress = key:match("_sta_([%da-fA-F:]+)$") or ""
-    operatingStandard = wlanConfigCommon.getStationDataFromIface(parentKey, macAddress, "capabilities")
+    local macAddress = key:match("([%da-fA-F:]+)$") or ""
+    macAddress = key:match("_wds") and modifyMAC(macAddress) or macAddress
+    local operatingStandard = ""
+    if key:match("_sta_") then
+      operatingStandard = wlanConfigCommon.getStationDataFromIface(parentKey, macAddress, "capabilities")
+    elseif key:match("_wds") then
+      operatingStandard = wlanConfigCommon.getDataFromWDS(key, "capabilities", "")
+    end
     return operatingStandard and operatingStandard:match("802.11(%a+)") or ""
   end,
   X_HostName = function(mapping, param, key, parentKey)
-    local macAddress = key:match("_sta_([%da-fA-F:]+)$") or ""
+    local macAddress = key:match("([%da-fA-F:]+)$") or ""
+    macAddress = key:match("_wds") and modifyMAC(macAddress) or macAddress
     local hostData = conn:call("hostmanager.device", "get", { ["mac-address"] = macAddress }) or {}
     for _, data in pairs(hostData) do
       return data.hostname or ""
@@ -337,7 +379,8 @@ local getAssociatedDevice = {
     return ""
   end,
   X_Active = function(mapping, param, key, parentKey)
-    local macAddress = key:match("_sta_([%da-fA-F:]+)$") or ""
+    local macAddress = key:match("([%da-fA-F:]+)$") or ""
+    macAddress = key:match("_wds") and modifyMAC(macAddress) or macAddress
     local hostData = conn:call("hostmanager.device", "get", { ["mac-address"] = macAddress }) or {}
     for _, data in pairs(hostData) do
       return data.state and data.state:match("connected") and "1" or "0"
@@ -345,7 +388,7 @@ local getAssociatedDevice = {
     return "0"
   end,
   X_000E50_SNR = function(mapping, param, key, parentKey)
-      return getSNR(param, key, parentKey)
+    return getSNR(param, key, parentKey)
   end,
   X_000E50_ConnectionTime = getStationInfo,
   X_Status = getStatus,

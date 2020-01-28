@@ -53,6 +53,25 @@ gettext.textdomain('web-framework-tch')
 --  @usage require('web.post_helper')
 local M = {}
 
+-- Method to get all the LAN interfaces
+-- @param #table allIntfs contains the available Interfaces(like wan, lan, loopback) and its details like ipv6uniquelocaladdr, paramindex, ipaddr
+-- @return #table it returns the only LAN interface name and index values.
+function M.getAllNonWirelessInterfaces(allIntfs)
+  local lanIntfs = {}
+  for _, intfs in ipairs(allIntfs) do
+    if intfs.type == "lan" then
+      local intfsName
+      if intfs.name and intfs.name ~= "" then
+        intfsName = intfs.name
+      else
+        intfsName = intfs.paramindex
+      end
+      lanIntfs[#lanIntfs + 1] = {name = intfsName, index = intfs.paramindex}
+    end
+  end
+  return lanIntfs
+end
+
 --- Method to store the POST parameters sent by the UI in UCI (SAVE action)
 -- @function [parent=#post_helper] handleQuery
 -- @param #table mapParams key/string dictionary containing for each form control's name, the associated path
@@ -761,7 +780,7 @@ function M.validateStringIsDomainName(value)
             if #strippedLabel > 63 then
                 return nil, T"Domain name segments (seperated by dots) cannot be longer than 63 characters."
             end
-            local correctLabel = match(strippedLabel, "^[a-zA-z0-9][a-zA-Z0-9%-]*[a-zA-Z0-9]")
+            local correctLabel = match(strippedLabel, "^[%w][%w%-]*[%w]")
             if #strippedLabel == 1 then
                 if not match(strippedLabel, "[a-zA-Z0-9]") then
                     return nil, T"Domain name segments (seperated by dots) of single character length cannot be a special character."
@@ -1519,11 +1538,52 @@ local endLoopback = ipv42num("127.255.255.255")
 local startMulticastRange = ipv42num("224.0.0.0")
 local endMulticastRange = ipv42num("239.255.255.255")
 local limitedBroadcast = ipv42num("255.255.255.255")
---- is the given IP address valid as a Local Device IP and NTP server
--- @param @tstring value the IP Address
--- @param @ttable object has localdevmask
--- @param @tstring key the random key value
--- @return true or nil+error message
+local classEStartIP = ipv42num("240.0.0.0")
+local classEEndIP = ipv42num("255.255.255.254")
+local softwareStartIP = ipv42num("0.0.0.1")
+local softwareEndIP = ipv42num("0.255.255.255")
+
+-- Check whether the given IPv4 address is a public IP address.
+-- @param @tstring value the IP Address$
+-- @param @ttable object has $localcpeip
+-- @param @tstring key the random key value$
+function M.publicIPValidation(value, object, key)
+  if value ~= "" then
+    if not M.isPublicIP(value) then
+      return nil, T"Not a Public address"
+    end
+    local ip = M.ipv42num(value)
+    if classEStartIP <= ip and classEEndIP >= ip then
+      return nil, T"Cannot use a reserved IP address."
+    end
+    if softwareStartIP <= ip and softwareEndIP >= ip then
+      return nil, T"Cannot use software address range."
+    end
+    if startLoopback <= ip and ip <= endLoopback  then
+      return nil, T"Cannot use IPv4 loopback address range."
+    end
+    if startMulticastRange <= ip and endMulticastRange >= ip then
+      return nil, T"Cannot use a multicast address."
+    end
+    if object.localpublicmask then
+      local success1 = M.isNetworkAddress(value, object.localpublicmask)
+      if success1 then
+        return nil, T"Cannot use the network address"
+      end
+      local success2 = M.isBroadcastAddress(ip, object.localpublicmask)
+      if success2 then
+        return nil, T"Cannot use the broadcast address"
+      end
+    end
+    return true
+  end
+end
+
+--- is the given IP address valid as a Local Device IP and NTP server$
+-- @param @tstring value the IP Address$
+-- @param @ttable object has localdevmask$
+-- @param @tstring key the random key value$
+-- @return true or nil+error message$
 
 function M.advancedIPValidation(value, object, key)
     if not value then
@@ -2235,6 +2295,65 @@ function M.DHCPStartAndLimitAddress(baseip, netmask, start, limit)
     network = M.num2ipv4(network)
     return startAddress, endAddress, network
   end
+end
+
+--- Is feature enabled or not
+-- @param feature Specific feature
+-- @param userRole Role of the user
+-- @return true if feature is enabled
+-- @return nil if feature is disabled
+function M.isFeatureEnabled(feature, userRole)
+  local allowedRoles = proxy.get("uci.web.feature.@"..feature..".")
+  if not allowedRoles then
+     return true
+  end
+  for _, role in ipairs(allowedRoles) do
+    if role.value == userRole then
+      return true
+    end
+  end
+end
+
+-- Function to validate a UciName
+-- value must be between 1 and 63 characters long
+-- valid name must be non-empty string that consists of letters, digits or underscores
+-- @return true or nil+error message
+function M.validateUciName(value)
+  if not match(value, "^[%w_]+$") or #value > 63 then
+    return nil, T"Invalid input."
+  end
+  return true
+end
+
+--- Validate the given IP/MAC is LXC's IP/MAC
+-- @param value IP/MAC address
+-- @return true if the value is not an LXC's IP/MAC Address
+-- @return nil+error message if the given input is LXC's IP/MAC Address
+function M.validateLXC(value)
+  if not value then
+    return nil, "Invalid input"
+  end
+
+  local lxcMac = { mac = "uci.env.var.local_eth_mac_lxc" }
+  local lxcAvailable = content_helper.getExactContent(lxcMac)
+  if not lxcAvailable then
+    return true
+  end
+  if M.validateStringIsMAC(value) then
+    if lower(lxcMac.mac) == lower(value) then
+      return nil, format(T"Cannot assign, %s in use by system.", value)
+    end
+    return true
+  elseif inet.isValidIPv4(untaint(value)) then
+    local lxcIP = content_helper.getMatchedContent("sys.proc.net.arp.",{ hw_address = lower(lxcMac.mac)})
+    for _, v in ipairs(lxcIP) do
+      if v.ip_address == value then
+        return nil, format(T"Cannot assign, %s in use by system.", value)
+      end
+    end
+    return true
+  end
+  return nil, T"Invalid input."
 end
 
 return M

@@ -86,7 +86,7 @@ local function get_hostinfo(address, addr_type)
         if dev4 then
           local ctr=0
           while dev4["ip"..ctr] do
-            if dev4["ip"..ctr].state == "connected" then
+            if dev4["ip"..ctr].state == "connected" or dev4["ip"..ctr].state == "stale" then
               ip = dev4["ip"..ctr].address
               break
             end

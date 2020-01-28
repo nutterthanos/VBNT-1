@@ -47,43 +47,24 @@ local function non_novas_entry(runtime, l2type)
     x:set("network", "ipoe", "auto", "0")
     -- disconnect pppv and put on different interface
     x:set("network", "pppv", "auto", "0")
+    x:commit("network")
     -- Set Pbit value for voice to 0
     x:delete("qos","Voice","pcp")
     x:commit("qos")
     os.execute("/etc/init.d/qos restart")
     if l2type == "ADSL" then
-        -- connect video and video2
-        x:set("network", "video", "ifname", "atm_video")
-        x:delete("network", "video", "auto")
-        x:set("network", "video2", "ifname", "atm_video2")
-        x:delete("network", "video2", "auto")
-        x:commit("network")
         --the WAN interface is defined --> create the xtm queues
         os.execute("/etc/init.d/xtm restart")
         os.execute("sleep 2")
         conn:call("network", "reload", { })
         conn:call("network.interface.wan", "up", { })
-        conn:call("network.interface.video", "up", { })
-        conn:call("network.interface.video2", "up", { })
     elseif l2type == "VDSL" then
-        -- disconnect video and video2
-        x:delete("network", "video", "ifname")
-        x:set("network", "video", "auto", "0")
-        x:delete("network", "video2", "ifname")
-        x:set("network", "video2", "auto", "0")
-        x:commit("network")
         --the WAN interface is defined --> create the xtm queues
         os.execute("/etc/init.d/xtm restart")
         os.execute("sleep 2")
         conn:call("network", "reload", { })
         conn:call("network.interface.wan", "up", { })
     elseif l2type == "ETH" then
-        -- disconnect video and video2
-        x:delete("network", "video", "ifname")
-        x:set("network", "video", "auto", "0")
-        x:delete("network", "video2", "ifname")
-        x:set("network", "video2", "auto", "0")
-        x:commit("network")
         os.execute("sleep 2")
         conn:call("network", "reload", { })
         conn:call("network.interface.wan", "up", { })

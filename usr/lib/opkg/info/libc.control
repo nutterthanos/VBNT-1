@@ -8,5 +8,5 @@ Status: unknown hold not-installed
 Essential: yes
 Maintainer: Felix Fietkau <nbd@openwrt.org>
 Architecture: arm_cortex-a9
-Installed-Size: 1207973
+Installed-Size: 1207613
 Description:  C library

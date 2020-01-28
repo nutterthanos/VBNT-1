@@ -154,29 +154,23 @@ local bridge_options = {
 local function validatedevIP(value, object, key)
     local valid, msg = vSIP(value, object, key)
     if valid then
-        if match(value, "192%.168%.253%.%d") then
-            return nil, "IP ranges 192.168.253.1~192.168.253.254 is reserved for IPTV services"
-        elseif match(value, "192%.168%.252%.%d") then
-            return nil, "IP ranges 192.168.252.1~192.168.252.254 is reserved for other services (WOL)"
-        else
-            local paramindex = bridge_options.changesessionindex
-            local netmask = untaint(object.netmask)
-            local result, nm1 = inet.validateIPv4Netmask(netmask)
-            if result then
-                for k,v in pairs(all_lan_ips) do
-                    if paramindex ~= k then
-                        local _, nm2 = inet.validateIPv4Netmask(all_lan_netmasks[k])
-                        local ip, gw, nm
-                        if nm1 > nm2 then
-                            ip, gw, nm = v, untaint(value), netmask
-                        else
-                            ip, gw, nm = value, v, all_lan_netmasks[k]
-                        end
-                        local validate = gVSIIN(gw, nm)
-                        result = validate(ip)
-                        if result then
-                            return nil, 'IP address ' .. value .. '/' .. (32-nm1) .. ' should not be overlapped with LAN IP interface ' .. k ..'(' .. v .. '/' .. (32-nm2) ..')'
-                        end
+        local paramindex = bridge_options.changesessionindex
+        local netmask = untaint(object.netmask)
+        local result, nm1 = inet.validateIPv4Netmask(netmask)
+        if result then
+            for k,v in pairs(all_lan_ips) do
+                if paramindex ~= k then
+                    local _, nm2 = inet.validateIPv4Netmask(all_lan_netmasks[k])
+                    local ip, gw, nm
+                    if nm1 > nm2 then
+                        ip, gw, nm = v, untaint(value), netmask
+                    else
+                        ip, gw, nm = value, v, all_lan_netmasks[k]
+                    end
+                    local validate = gVSIIN(gw, nm)
+                    result = validate(ip)
+                    if result then
+                        return nil, 'IP address ' .. value .. '/' .. (32-nm1) .. ' should not be overlapped with LAN IP interface ' .. k ..'(' .. v .. '/' .. (32-nm2) ..')'
                     end
                 end
             end

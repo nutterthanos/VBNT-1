@@ -53,6 +53,7 @@ end
 --These will cache the lan/wan interfaces, based on the firewall config
 local lanInterfacesCache
 local wanInterfacesCache
+local lxcMAC = string.lower(get_from_uci({config = "env", sectionname = "var", option = "local_eth_mac_lxc"}))
 
 -- Uses the cached list. Make sure to update lanInterfacesCache (only) when needed
 local function isLanInterface(interface)
@@ -135,7 +136,7 @@ local function getActiveEthernetNumberOfEntries(mapping)
     local numberOfHosts = 0
     local intfType, macAddr = network.getExternalWifiIntfType(hostsCache)
     for _, v in pairs(hostsCache) do
-      if v["technology"] == "ethernet" and  isLanInterface(v["interface"]) and (v["l2interface"] ~= intfType and v["mac-address"] ~= macAddr) and v["state"] == "connected" then
+      if v["technology"] == "ethernet" and  isLanInterface(v["interface"]) and (v["l2interface"] ~= intfType and v["mac-address"] ~= macAddr and v["mac-address"] ~= lxcMAC ) and v["state"] == "connected" then
         numberOfHosts = numberOfHosts + 1
       end
     end
@@ -267,6 +268,10 @@ local Sys_Hosts_Host_i_ = {
         access = "readOnly",
         type = "unsignedInt",
       },
+      FriendlyName = {
+        access = "readWrite",
+        type = "string",
+      },
     }
   }
 }
@@ -275,7 +280,7 @@ local dhcp = require("transformer.shared.dhcp")
 
 -- Extract an IP address from the given value and add it to the list
 local function extractAddress(value, addresses)
-  if value["state"] == "connected" then
+  if value["state"] == "connected" or value["state"] == "stale" then
     if addresses == "" then
       addresses = value["address"]
     else
@@ -283,6 +288,16 @@ local function extractAddress(value, addresses)
     end
   end
   return addresses
+end
+
+local function extractFriendlyName(dev)
+  if dev and dev["user-friendly-name"] and dev["user-friendly-name"] ~= "" then
+    return dev["user-friendly-name"]
+  elseif dev["hostname"] and dev["hostname"] ~= "" then
+    return dev["hostname"]
+  else
+    return "Unknown-" .. dev["mac-address"]
+  end
 end
 
 local hostExtraInfo
@@ -588,6 +603,7 @@ Sys_Hosts_Host_i_.getall = function(mapping, key)
         BytesReceived = extractStats(dev, "BytesReceived"),
         PktsSent = extractStats(dev, "PktsSent"),
         PktsReceived = extractStats(dev, "PktsReceived"),
+        FriendlyName = extractFriendlyName(dev),
     }
 end
 
@@ -739,6 +755,9 @@ Sys_Hosts_Host_i_.set = {
   Priority = setPriority,
   HostName = setHostExtraInfo,
   HostType = setHostExtraInfo,
+  FriendlyName = function(mapping, param, value, key)
+    conn:call("hostmanager.device", "set", { ["mac-address"] = key, ["user-friendly-name"] = value })
+  end
 }
 
 Sys_Hosts_Host_i_.get = {
@@ -825,6 +844,9 @@ Sys_Hosts_Host_i_.get = {
   PktsReceived = function(mapping, param, key)
     local dev = key2dev(key)
     return extractStats(dev, param)
+  end,
+  FriendlyName = function(mapping, param, key)
+    return extractFriendlyName(key2dev(key))
   end,
 }
 Sys_Hosts_Host_i_.commit = function()

@@ -1,7 +1,6 @@
 #!/usr/bin/env lua
 
 local ubus, uloop = require('ubus'), require('uloop')
-local voiceled = require("ledframework.voiceled")
 
 uloop.init()
 

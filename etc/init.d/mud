@@ -3,7 +3,7 @@
 
 USE_PROCD=1
 START=97
-STOP=03
+#STOP=03
 MUD_PID_FILE=/var/run/mud.pid
 FILE_TYPE=/etc/mud/mud_file_type_config.ini
 MUD_BIN=/usr/bin/mud

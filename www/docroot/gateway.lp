@@ -9,6 +9,8 @@ local web = require("web.web")
 local bridged = require("bridgedmode_helper")
 local assistance = require("web.assistance")
 local assistant = assistance.getAssistant("remote")
+local currentuser = ngx.ctx.session:getrole()
+local json = require("dkjson")
 
 local cui = {
     nsplink = "uci.web.uiconfig.@uidefault.nsplink",
@@ -28,6 +30,7 @@ else
     logo_class = ""
 end
 local stylesheet = cui["nsplogo"]:match("internode") and "/css/internode.css" or "/css/gw.css"
+stylesheet = stylesheet .."?".. cui.timestamp
 
 if ngx.req.get_method() == "POST" then
   local post_args = ngx.req.get_post_args()
@@ -40,6 +43,13 @@ if ngx.req.get_method() == "POST" then
     ngx.redirect("/");
   end
 end
+
+if ngx.var.request_method == "GET" and ngx.req.get_uri_args().getSessionStatus == "true" then
+  ngx.header.content_type = "application/json"
+  local role = ngx.ctx.session:getrole()
+  ngx.print(json.encode({current_role = role}))
+  ngx.exit(ngx.OK)
+end
   ngx.print('\
 <!DOCTYPE HTML>\
 ');  ngx.print( string.format('<html lang="%s">', gettext.language()) ); ngx.print('\
@@ -50,10 +60,10 @@ end
     <meta name="CSRFtoken" content="');  ngx.print( ngx.ctx.session:getCSRFtoken() ); ngx.print('">\
     <meta name="Advanced" content="');  ngx.print( cui.advanced ); ngx.print('">\
     <link href="');  ngx.print( stylesheet ); ngx.print('" rel="stylesheet">\
-    <link href="/css/responsive.css" rel="stylesheet">\
-    <!--[if IE 7]><link rel="stylesheet" href="/css/font-awesome-ie7.css"><![endif]-->\
-    <script src="/js/main-min.js" ></script>\
-    <!--[if lt IE 9]> <script src="/js/media-min.js"></script> <![endif]-->\
+    <link href="/css/responsive.css?');  ngx.print(cui.timestamp); ngx.print('" rel="stylesheet">\
+    <!--[if IE 7]><link rel="stylesheet" href="/css/font-awesome-ie7.css?');  ngx.print(cui['timestamp']); ngx.print('"><![endif]-->\
+    <script src="/js/main-min.js?');  ngx.print(cui.timestamp); ngx.print('" ></script>\
+    <!--[if lt IE 9]> <script src="/js/media-min.js?');  ngx.print(cui.timestamp); ngx.print('"></script> <![endif]-->\
     <title>');  ngx.print( T"Gateway" ); ngx.print('</title>\
   </head>\
 \
@@ -142,6 +152,12 @@ end
     {\
       $(".loading").removeClass("hide");\
     });\
+\
+var current_role = \'');  ngx.print(currentuser); ngx.print('\';\
+\
+if(window.sessionStorage.getItem("current_role") == null && current_role != "guest"){\
+  window.sessionStorage.setItem("current_role", current_role);\
+}\
 </script>\
 \
 '); 

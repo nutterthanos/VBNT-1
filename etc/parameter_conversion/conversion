@@ -1,6 +1,5 @@
 debug_on
 
-inline_sh_cmd value=$(uci get -q -c %%OLDCONFIG%%/etc/config env.var.iinet_variant); if [[ $value == "novas" ]]; then uci set env.var.iinet_variant="novas"; /usr/bin/varianthelper; elif [[ -z "$value" ]]; then old=$(uci get -q -c %%OLDCONFIG%%/etc/config env.var.prod_friendly_name); if [[ $old == "TG789vacv2" ]]; then uci set env.var.iinet_variant="novas"; /usr/bin/varianthelper; elif [[$old == "MediaAccess TG789vac v2" ]]; then uci set env.var.iinet_variant="non_novas"; fi; fi; fi
 copy_file /etc/hosts
 
 
@@ -71,6 +70,7 @@ uci_set ddns.myddns_ipv4.domain
 uci_set ddns.myddns_ipv4.username
 uci_set ddns.myddns_ipv4.password
 uci_set ddns.myddns_ipv4.lookup_host
+uci_set ddns.myddns_ipv4.use_https
 inline_sh_cmd value=$(uci get -q -c %%OLDCONFIG%%/etc/config ddns.myddns_ipv4.service_name); if [[ $value == "No-IP.com" || $value == "NoIP.com" ]]; then uci set ddns.myddns_ipv4.service_name='no-ip.com'; fi
 
 uci_set ddns.myddns_ipv6.enabled
@@ -79,6 +79,7 @@ uci_set ddns.myddns_ipv6.domain
 uci_set ddns.myddns_ipv6.username
 uci_set ddns.myddns_ipv6.password
 uci_set ddns.myddns_ipv6.lookup_host
+uci_set ddns.myddns_ipv6.use_https
 
 
 uci_section dhcp.@dhcp
@@ -115,12 +116,8 @@ uci_set network.wan6.proto
 uci_set network.wan6.ip6prefix
 uci_set network.wan6.ip6prefixlen
 uci_set network.wan6.ip4prefixlen
-uci_set network.wan6.ip4prefixlen
-
-uci_set network.video.auto
-uci_set network.video.ifname
-uci_set network.video2.auto
-uci_set network.video2.ifname
+uci_set network.wan6.peeraddr
+uci_set network.wan6.ipv6
 
 uci_set network.eth4.mtu
 uci_set network.ptm0.mtu
@@ -163,14 +160,15 @@ uci_set firewall.userrules.enabled
 uci_set firewall.userrules_v6.enabled
 uci_set firewall.defaultrules.enabled
 uci_section firewall.@fwconfig
-uci_section firewall.@userredirect
+uci_section firewall.@userredirect id=name
 uci_set firewall.userredirects.enabled
 uci_set firewall.defaultoutgoing.target
 
 uci_section firewall.@zone id=name
 uci_section firewall.@rule id=name
 uci_section firewall.@forwarding id=src,dest
-uci_set firewall.@helper[4].enable
+uci_set firewall.siphelper.enable
+uci_set firewall.siploopback.enable
 copy_file /etc/config/igmpproxy
 
 copy_file /etc/config/intercept
@@ -228,6 +226,7 @@ uci_set wansensing.global.initmode
 copy_file /etc/config/datausage
 
 uci_set xdsl.dsl0.enabled
+uci_list xdsl.dsl0.multimode
 
 copy_file /etc/config/xtm
 inline_sh_cmd lua /etc/parameter_conversion/scripts/convshaping.lua
@@ -237,3 +236,4 @@ uci_set wol.@proxy[0].dest_port
 uci_set wol.@proxy[0].enable
 uci_section wol.@target
 
+uci_set env.var.provisioning_code

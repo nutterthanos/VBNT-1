@@ -3,57 +3,25 @@
 #Assume that Build is originally a Prod build
 #Add CLASH user
 #Enable Dropbear on LAN
-local confVersionSuffix=$(uci get env.var.CONF_VERSION | sed -n 's/.*\(-.\).*/\1/p')
-if [ $confVersionSuffix == "-O" ]; then
-  uci set clash.engineer=user
-  uci set clash.engineer.ssh_interface='lan'
-  uci set clash.engineer.ssh='1'
-  uci set clash.engineer.telnet='0'
-  uci set clash.engineer.serial='0'
-  uci set clash.engineer.gak_id='1'
-  uci set clash.engineer.historyfile='/etc/clash/historyengineer.txt'
-  uci add_list clash.engineer.command='add'
-  uci add_list clash.engineer.command='apply'
-  uci add_list clash.engineer.command='brctl'
-  uci add_list clash.engineer.command='coredump'
-  uci add_list clash.engineer.command='count'
-  uci add_list clash.engineer.command='del'
-  uci add_list clash.engineer.command='dmesg'
-  uci add_list clash.engineer.command='dsldiagd'
-  uci add_list clash.engineer.command='get'
-  uci add_list clash.engineer.command='getpn'
-  uci add_list clash.engineer.command='ifconfig'
-  uci add_list clash.engineer.command='ifstat'
-  uci add_list clash.engineer.command='ifstatus'
-  uci add_list clash.engineer.command='ip'
-  uci add_list clash.engineer.command='iptables'
-  uci add_list clash.engineer.command='ip6tables'
-  uci add_list clash.engineer.command='list'
-  uci add_list clash.engineer.command='logread'
-  uci add_list clash.engineer.command='newsrpuser'
-  uci add_list clash.engineer.command='nslookup'
-  uci add_list clash.engineer.command='ping'
-  uci add_list clash.engineer.command='ps'
-  uci add_list clash.engineer.command='readlogfile'
-  uci add_list clash.engineer.command='reboot'
-  uci add_list clash.engineer.command='resolve'
-  uci add_list clash.engineer.command='route'
-  uci add_list clash.engineer.command='rtfd'
-  uci add_list clash.engineer.command='set'
-  uci add_list clash.engineer.command='showinfo'
-  uci add_list clash.engineer.command='subscribe'
-  uci add_list clash.engineer.command='tcpdump'
-  uci add_list clash.engineer.command='top'
-  uci add_list clash.engineer.command='traceroute'
-  uci add_list clash.engineer.command='ubuscall'
-  uci add_list clash.engineer.command='ubuslisten'
-  uci add_list clash.engineer.command='unsubscribe'
-  uci add_list clash.engineer.command='upgrade'
-  uci add_list clash.engineer.command='wireless_autochannel'
-  uci add_list clash.engineer.command='xdslctl'
+local confVersionSuffix=$(uci get env.var.CONF_VERSION | sed -n 's/.*\(-.\)$/\1/p')
+if [ $confVersionSuffix ] && ( [ $confVersionSuffix == "-O" ]  || [ $confVersionSuffix == "-T" ] ); then
+  uci -q del_list clash.engineer.ssh_interface='lan'
+  uci add_list clash.engineer.ssh_interface='lan'
   uci commit clash
 
   uci set dropbear.lan.enable="1"
   uci set dropbear.lan.PasswordAuth='on'
   uci commit dropbear  
+else
+  uci delete clash.engineer
+  uci commit clash
+  sed -i 's|::askconsole:/bin/login|#::askconsole:/bin/login|' /etc/inittab
+fi
+if [ $confVersionSuffix ] && [ $confVersionSuffix == "-T" ]; then
+  sed -i 's|root:x:0:0:root:/root:/bin/restricted_shell|root:x:0:0:root:/root:/bin/ash|' /etc/passwd
+  uci set dropbear.lan.RootLogin='1'
+  uci set dropbear.lan.RootPasswordAuth='on'
+  uci commit dropbear
+else
+  sed -i '/== TCH Development/d' /etc/dropbear/authorized_keys
 fi

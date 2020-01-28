@@ -14,6 +14,7 @@ local tonumber = tonumber
 local r_hosts_ac
 local ngx = ngx
 local vQTN = post_helper.validateQTN
+local vLXC = post_helper.validateLXC
 local gAV = post_helper.getAndValidation
 
 local function setlanguage()
@@ -258,7 +259,7 @@ function M.getTod()
     ["stop_time"]   = validateTime,
     ["weekdays"]    = getWeekDays,
     ["enabled"]     = vB,
-    ["id"]          = gAV(vSIM,vQTN)
+    ["id"]          = gAV(vSIM,vQTN,vLXC)
   }
 
   local tod_default = {
@@ -435,12 +436,11 @@ function M.compareTodRule(oldTODRules, newTODRule)
   local newStart, newEnd, newDay
   local oldStart, oldEnd, oldDay
   local overlap
-  local currentEditIndex = tonumber(ngx.req.get_post_args().index)
   for _,newrule in ipairs(newTODRule) do
     newStart = newrule.start_time
     newEnd = newrule.stop_time
     newDay = newrule.weekdays
-    for oldIndex,oldrule in ipairs(oldTODRules) do
+    for _,oldrule in ipairs(oldTODRules) do
       oldStart = oldrule.start_time
       oldEnd = oldrule.stop_time
       oldDay = oldrule.weekdays
@@ -458,7 +458,7 @@ function M.compareTodRule(oldTODRules, newTODRule)
           end
         end
       end
-      if duplicate == true and oldIndex ~= currentEditIndex then
+      if duplicate == true then
         if(newStart == oldStart and newEnd == oldEnd) then
           return nil, T"Duplicate contents are not allowed"
         else
@@ -523,11 +523,12 @@ end
 -- function to retrieve existing access control tod rules list
 -- @param #mac_id have the mac name of new tod rule request
 -- @return access control tod rules list
-function M.getAccessControlTodRuleLists(mac_id)
+function M.getAccessControlTodRuleLists(mac_id, curIndex)
    local rulePath = content_helper.convertResultToObject(accesscontroltod_path, proxy.get(accesscontroltod_path))
    local oldTodRules = {}
    for _,rule in pairs(rulePath) do
-     if (rule["id"] == mac_id) then
+     local editRuleIdx = curIndex and "@" .. curIndex
+     if rule["id"] == mac_id and editRuleIdx ~= rule.paramindex then
        oldTodRules[#oldTodRules + 1] = {}
        oldTodRules[#oldTodRules].rule_name = rule.name
        oldTodRules[#oldTodRules].start_time = rule.start_time
@@ -566,7 +567,7 @@ function M.validateTodRule(value, object, key, todRequest)
   if todRequest == "Wireless" then
     oldTODRules = M.getWifiTodRuleLists(object["id"])
   elseif todRequest == "AccessControl" then
-    oldTODRules = M.getAccessControlTodRuleLists(object["id"])
+    oldTODRules = M.getAccessControlTodRuleLists(object["id"], object["index"])
   else
     return nil, T"Function input param is missing"
   end
@@ -580,7 +581,7 @@ function M.validateTodRule(value, object, key, todRequest)
   newTODRule[#newTODRule].start_time = object["start_time"]
   newTODRule[#newTODRule].stop_time = object["stop_time"]
   newTODRule[#newTODRule].enable = object["mode"]
-  newTODRule[#newTODRule].index = object["paramindex"]
+  newTODRule[#newTODRule].index = object["index"]
   newTODRule[#newTODRule].weekdays = {}
   --The DUT will block/allow all the time if none of the days are selected
   for _,v in pairs(object[key]) do

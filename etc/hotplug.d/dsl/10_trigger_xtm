@@ -1,3 +1,5 @@
-[ ifup = "$ACTION" ] || exit
-/etc/init.d/xtm enabled || exit 0
-/etc/init.d/xtm start
+if [ "$ACTION" = "ifup" ] ; then
+	/etc/init.d/xtm start
+else
+	/etc/init.d/xtm stop
+fi

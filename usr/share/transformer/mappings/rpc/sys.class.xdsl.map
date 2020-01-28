@@ -2076,6 +2076,7 @@ local sys_class_xdsl_ = {
 }
 
 local dsl_supported, xdslctl = pcall(require,"transformer.shared.xdslctl")
+local ceil = math.ceil
 if not dsl_supported then
   return nil, "DSL not supported"
 end
@@ -3054,10 +3055,12 @@ sys_class_xdsl_.get = {
     return xdslctl.infoValue("SuccessFailureCause", "", "", key)
   end,
   UPBOKLE = function (mapping, params, key)
-    return xdslctl.infoValue("UPBOKLE", "", "", key)
+    local value = tonumber(xdslctl.infoValue("UPBOKLE", "", "", key)) or 0
+    return tostring(ceil(value/10))
   end,
   UPBOKLER = function (mapping, params, key)
-    return xdslctl.infoValue("UPBOKLER", "", "", key)
+    local value = tonumber(xdslctl.infoValue("UPBOKLER", "", "", key)) or 0
+    return tostring(ceil(value/10))
   end,
   US0MASK = function (mapping, params, key)
     return xdslctl.infoValue("US0MASK", "", "", key)

@@ -26,7 +26,6 @@ local tonumber = tonumber
 local time = os.time
 local date = os.date
 local open = io.open
-
 -- for content saving and transferring
 local path_retain = "/etc/bulkdata"
 local max_retain_failed_reports = 10
@@ -252,8 +251,17 @@ local function get_encoding_name(names, nameid, ids, param)
     return
   end
   local name = names[nameid]
-  if #ids > 0 and ids[1]:match("^%d+$") then
-    local idstr = concat(ids, ".")
+  -- Remove non digital index from ids table
+  local indexs = {}
+  for k,v in ipairs(ids) do
+    if v:match("^%d+$") then
+      insert(indexs, v)
+    elseif v:match("%.") then
+      insert(indexs,match(v,"(%w+)%.%w+"))
+    end
+  end
+  if #indexs > 0 and indexs[1]:match("^%d+$") then
+    local idstr = concat(indexs, ".")
     name = format("%s.%s", name, idstr)
   end
   if type(param) == "string" then
@@ -302,6 +310,8 @@ local function json_encode_content(profile)
         --save all references for checking
         if reference:sub(-1, -1) == "." then
           local part = gsub(reference, "%*", "([%%w_]+)")
+          part = gsub(part, "%.", "%%.")
+          part = part .. "*([%w_%.]*)"
           partial_pathset[#partial_pathset+1] = part
           names[part] = name
         else
@@ -314,8 +324,11 @@ local function json_encode_content(profile)
 
   local result = proxy.get(unpack(paths))
   local pathstr = concat(pathset, " ")
-  local process_num = 0
-  local temp_id = 0
+  local limits = {}
+  for _, pl in ipairs(profile.param_limits or {}) do
+    local l_pattern, l_max = pl:match("^(.*)|(.*)")
+    insert(limits, {pattern = l_pattern, max = tonumber(l_max), count = 0, index = {} })
+  end
   for _,param in ipairs(result or {}) do
     -- deal with full path
     local name = format("%s%s", param.path, param.param)
@@ -340,24 +353,27 @@ local function json_encode_content(profile)
     end
     -- deal with partial path
     if not matched and #partial_pathset > 0 then
+      local temp_path  = format("%s%s", param.path, param.param)
       for _,p in ipairs(partial_pathset) do
-        local temp_path  = format("%s%s", param.path, param.param) 
         local ids = { match(temp_path, p) }
+        local ignore = false
         if #ids > 0 then
-          -- For ProcessStatus.Process, there are almost 200 entries in total. we only report the first 20 entries.
-          local processid = temp_path:match("Process.(%d+)")
-          if processid then
-            -- only record the first 20 entries
-            if processid ~= temp_id then
-              process_num = process_num +1
-              temp_id = processid
-            end
-            if process_num < 21 then
-              encoding_name = get_encoding_name(names, p, ids, param.param)
-              matched = true
+          --Deal with limitation for the parameter configuration
+          for _, lim in ipairs(limits) do
+            local limid = temp_path:match(format("%s(%%d+)", lim.pattern))
+            if limid then
+              if lim.count < lim.max then
+                if not lim.index[limid] then
+                  lim.count = lim.count + 1
+                  lim.index[limid] = true
+                end
+              else
+                ignore = true
+              end
               break
             end
-          else
+          end
+          if not ignore then
             encoding_name = get_encoding_name(names, p, ids, param.param)
             matched = true
             break
@@ -567,6 +583,7 @@ local function do_update_crontab(profile)
 
   -- get reference time by seconds
   timeref.year, timeref.month, timeref.day, timeref.hour, timeref.min, timeref.sec = match(time_reference, pattern)
+  timeref.sec = 0
   local reference = time(timeref)
   -- add 1 seconds offset for current time to avoid transfer too fast to update next crontab task
   local current = time() + 1
@@ -671,11 +688,26 @@ local function main(args)
   if #args > 1 then
     local action = remove(args, 1)
     profiletimed = {}
+    local seconds = {}
+    local profiles = {}
+    local pattern = "^%d+%-%d+%-%d+T%d+:%d+:(%d+)Z$"
     for _,v in ipairs(args) do
-      local profile = cursor:get_all("bulkdata", v)
-      if profile then
-        actions[action](profile)
+      profiles[v] = cursor:get_all("bulkdata", v)
+      if profiles[v] and profiles[v].enabled ~= "0" then
+        insert(seconds, {v, tonumber(match(profiles[v].time_reference, pattern) or 0)})
       end
+    end
+    sort(seconds, function(a,b) return a[2]<b[2] end)
+    local presecond = 0
+    for _,v in ipairs(seconds) do
+      if action == "transfer" then
+        local delay = v[2]-presecond
+        presecond = v[2]
+        if delay > 0 then
+          os.execute("sleep " .. tostring(delay))
+        end
+      end
+      actions[action](profiles[v[1]])
     end
 
     -- according to update status to decide reconfiguration crontab or not

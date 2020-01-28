@@ -71,7 +71,7 @@ end
 
 -- Non-configurable data
 local cs = {
-    ipaddr = "rpc.network.interface.@wan.ip6addr",
+    ipaddr = "rpc.network.interface.@wan6.ip6addr",
     nexthop = "rpc.network.interface.@wan6.nexthop",
     dns = "rpc.network.interface.@wan6.dnsservers",
     rpc_ip6prefix = "rpc.network.interface.@wan6.ip6prefix",
@@ -109,7 +109,8 @@ ngx.print(ui_helper.createMessages(message_helper.popMessages()))
     ajax_attr.span.id = "dns"
     html[#html+1] = ui_helper.createLabel(T"DNS servers", cs["dns"], ajax_attr)
     if cs["uci_delegate"] ~= "0" then
-        html[#html+1] = ui_helper.createLabel(T"IPv6 prefix delegation", cs["rpc_ip6prefix"])
+        ajax_attr.span.id = "rpc_ip6prefix"
+        html[#html+1] = ui_helper.createLabel(T"IPv6 prefix delegation", cs["rpc_ip6prefix"], ajax_attr)
     end
 
     ngx.print(html)

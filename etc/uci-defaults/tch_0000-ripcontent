@@ -175,3 +175,16 @@ ascii2uci 0010 env.rip.sw_flag
 # Useless since it won't prevent root from writing to the file ...
 [ "$VERBOSE" -eq "1" ] && echo Setting config file to read-only
 [ "$PRETEND" -eq "0" ] && chmod ogu-w $BASEPATH/env
+
+{
+    echo ''
+
+    echo 'stop() {'
+
+    echo '   echo `(echo "poni2c reboot")| consoled ` > /dev/null'
+
+    echo '}'
+
+}  >> /etc/init.d/pon_caldata
+
+ln -s /etc/init.d/pon_caldata /etc/rc.d/K19pon_caldata

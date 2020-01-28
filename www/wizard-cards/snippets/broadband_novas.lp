@@ -73,8 +73,6 @@ end
 local wan_atm_uci_path = "uci.xtm.atmdevice.@atm_ppp."
 --local wan_atm_uci_ipoe_path = "uci.xtm.atmdevice.@atm_ipoe."
 local wan_interface_path = "uci.network.interface.@wan."
---local video_interface_path = "uci.network.interface.@video."
---local video2_interface_path = "uci.network.interface.@video2."
 local static_dns_path = "rpc.network.interface.@wan.static_dns_servers"
 
 local sip_net_p = "uci.mmpbxrvsipnet.network.@sip_net."
@@ -454,8 +452,8 @@ local wan_proto_options_confirm = setmetatable({
                 class= "span4",
             },
         }
-        html[#html+1] = ui_helper.createInputText(T"Username: ", "wan_ppp_user_name", content["wan_ppp_user_name"], wan_ppp_class, helpmsg["wan_ppp_user_name"])
-        html[#html+1] = ui_helper.createInputPassword(T"Password:", "wan_ppp_password", content["wan_ppp_password"], wan_ppp_class, helpmsg["wan_ppp_password"])
+        html[#html+1] = ui_helper.createInputText(T"Username: ", "wan_ppp_user_name", content["ppp_username"], wan_ppp_class, helpmsg["wan_ppp_user_name"])
+        html[#html+1] = ui_helper.createInputPassword(T"Password:", "wan_ppp_password", content["ppp_password"], wan_ppp_class, helpmsg["wan_ppp_password"])
         html[#html+1] = ui_helper.createInputText(T"VPI Number: ", "wan_ppp_vpi_number", content["wan_ppp_vpi_number"], wan_pppoa_class, helpmsg["wan_ppp_vpi_number"])
         html[#html+1] = ui_helper.createInputText(T"VCI Number: ", "wan_ppp_vci_number", content["wan_ppp_vci_number"], wan_pppoa_class, helpmsg["wan_ppp_vci_number"])
 
@@ -521,16 +519,16 @@ local wan_proto_options_confirm = setmetatable({
 $(document).ready(function () {\
   var wan_type = $("select[name=\'wan_type\']").val();\
   if (wan_type != "adsl") {\
-    $(\'option[value="pppoa"]\').hide();\
+    $(\'#wan_proto option[value="pppoa"]\').hide();\
   }\
 })\
 \
 $(\'select[name="wan_type"]\').on("change", function() {\
   var wan_type = $("select[name=\'wan_type\']").val();\
   if (wan_type == "adsl") {\
-    $(\'option[value="pppoa"]\').show();\
+    $(\'#wan_proto option[value="pppoa"]\').show();\
   } else {\
-    $(\'option[value="pppoa"]\').hide();\
+    $(\'#wan_proto option[value="pppoa"]\').hide();\
     var wan_proto_el = $("select[name=\'wan_proto\']")\
     var wan_proto = wan_proto_el.val();\
     if (wan_proto == "pppoa") {\

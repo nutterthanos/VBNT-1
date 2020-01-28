@@ -246,13 +246,6 @@ local cui = {
   upgradefw = "uci.web.uiconfig.@uidefault.upgradefw",
 }
 content_helper.getExactContent(cui)
-local nimda = {
-  username = "uci.web.user.@usr_nimda.name",
-}
-content_helper.getExactContent(nimda)
-if untaint(nimda.username) ~= "" and untaint(ngx.ctx.session:getusername()) ~= nimda.username then
-    cui.upgradefw = '0'
-end
 
 -- Handle fwupgrade/configimport/configexport specific GET/POSTs.
 if ngx.req.get_method() == "POST" then
@@ -631,7 +624,7 @@ ngx.print(ui_helper.createMessages(message_helper.popMessages()))
       html[#html + 1] = '<div id="rebooting-bar" class="progress progress-striped active hide">'
       html[#html + 1] = '  <div class="bar bar-warning" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" >'
       html[#html + 1] = '</div></div>'
-      html[#html + 1] = ui_helper.createButton(T"Factory Defaults", T"Reset", "icon-bolt", wait_for_reset)
+      html[#html + 1] = ui_helper.createButton(T"Factory Defaults", T"Factory Reset", "icon-bolt", wait_for_reset)
       html[#html + 1] = ui_helper.createAlertBlock(T"Resetting to factory defaults, please wait...", resetting)
       html[#html + 1] = '<div id="resetting-bar" class="progress progress-striped active hide">'
       html[#html + 1] = '  <div class="bar bar-warning" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" >'

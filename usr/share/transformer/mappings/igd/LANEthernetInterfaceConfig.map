@@ -96,11 +96,21 @@ end
 
 -- entries for IGD.LANInterfaces.LANEthernetInterfaceConfig
 local function LANInterfacesEntries()
-  -- TR-098: `This object contains LAN-side layer 1/2 interfaces that are not currently connected to
-  -- the Gateway's IP router and which therefore do not currently reside within a LANDevice instance.`
-  --    => In our case, the LAN interfaces are always considered `connected`,
-  --       so no entries are instantiated under LANInterfaces
-  return {}
+  local entries = {}
+  local interfaceEntries = {}
+  local lanIntf = network.getLanInterfaces()
+  for ifname, _ in pairs(lanIntf) do
+    local ll_intfs = common.get_lower_layers(ifname)
+    local relays = get_pppoerelay_for_interface(ifname)
+    -- Extract the interfaces whose name start with eth. Those are the ones we need to list
+    for _, interface in pairs(ll_intfs) do
+      if match(interface, "eth[^%s]+") and not relays[interface] and not interfaceEntries[interface] then
+        entries[#entries+1] = interface
+        interfaceEntries[interface] = true
+      end
+    end
+  end
+  return entries
 end
 
 local intfDiagHelper = require("transformer.shared.intfdiaghelper")

@@ -118,7 +118,7 @@ local ubus = mapper("ubus").connect()
 local bssBinding = { config = "bcm_spdsvc" }
 local configChanged = false
 local format = string.format
-local ubusCount = 0
+local ubusCount = false
 local setResultValue = {}
 
 local inet = require("tch.inet")
@@ -461,7 +461,7 @@ local function setDiagnosticState(mapping, param, value)
     return nil, "Invalid value"
   end
   if value == "Requested" then
-    ubusCount = 0
+    ubusCount = false
     measureUbus()
   elseif value == "Abort" then
     setAbortValue()
@@ -520,10 +520,14 @@ Multi_X_000E50_SpeedService_.set = {
 local function setUbusEvent(mapping, action, data)
   if data.status == "completed" then
     setSpdsvcUci("state", "Complete")
-    if ubusCount == 0 then
-      addResultValue()
-      ubusCount = ubusCount + 1
-    end
+    if ubusCount == false then
+       addResultValue()
+       ubusCount = true
+     end
+  elseif data.status == "failed" then
+    setSpdsvcUci("state", "Error")
+  end
+  if data.status == "completed" or data.status == "failed" then
     uciHelper.commit(bssBinding)
   end
 end

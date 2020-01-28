@@ -56,7 +56,7 @@ uci set env.global.status='Disabled'
 uci set versioncusto.override.fwversion_suffix="-"`uci get env.var.CONF_VERSION`
 if [ $(uci get env.rip.sw_flag) = "F2" ]; then
   uci set env.var.ssid_prefix="Internode"
-  uci set versioncusto.fwversion_prefix='I-'
+  uci set versioncusto.override.fwversion_prefix='I-'
 fi
 uci commit env
 uci commit versioncusto

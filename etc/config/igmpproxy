@@ -41,12 +41,6 @@ config interface 'VLAN3'
 config interface 'wan'
         option state 'upstream'
 
-config interface 'video'
-        option state 'upstream'
-
-config interface 'video2'
-        option state 'upstream'
-
 #
 # Exclude upnp
 #

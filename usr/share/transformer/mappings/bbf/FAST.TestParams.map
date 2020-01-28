@@ -100,6 +100,15 @@ local function xdslctlLineIdMap2(key)
   end
 end
 
+local function getdslData(dslInfo, val, default, key, size)
+  local dslData = xdslctl.infoValue(dslInfo, val, default, key) or "0"
+  if #dslData > size then
+    local finaldslData = string.sub(dslData, 1, size)
+    return string.match(finaldslData, "(.*)%,")
+  end
+  return dslData
+end
+
 Multi_FAST_Line_i_TestParams_.get = {
   SNRGds = function(mapping, param, key)
     return xdslctl.infoValue("SNRG", "ds", nil, xdslctlLineIdMap2(key)) or "0"
@@ -108,10 +117,10 @@ Multi_FAST_Line_i_TestParams_.get = {
     return xdslctl.infoValue("SNRG", "us", nil, xdslctlLineIdMap2(key)) or "0"
   end,
   SNRpsds = function(mapping, param, key)
-    return xdslctl.infoValue("SNRps", "ds", nil, xdslctlLineIdMap2(key)) or "0"
+    return getdslData("SNRps", "ds", nil, xdslctlLineIdMap2(key), 2047) or "0"
   end,
   SNRpsus = function(mapping, param, key)
-    return xdslctl.infoValue("SNRps", "us", nil, xdslctlLineIdMap2(key)) or "0"
+    return getdslData("SNRps", "us", nil, xdslctlLineIdMap2(key), 2047) or "0"
   end,
   SNRMTds = function(mapping, param, key)
     return xdslctl.infoValue("SNRMT", "ds", nil, xdslctlLineIdMap2(key)) or "0"
